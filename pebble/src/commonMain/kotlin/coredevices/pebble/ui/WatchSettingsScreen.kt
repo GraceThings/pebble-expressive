@@ -2061,6 +2061,39 @@ fun rememberSettingsItemsState(navBarNav: NavBarNav?, snackbarDisplay: SnackbarD
                     show = { debugOptionsEnabled },
                 ) },
                 basicSettingsToggleItem(
+                    title = "Download app updates in background",
+                    description = "When an app you've used gets an update, download it in the background so it is ready for next launch",
+                    topLevelType = TopLevelType.Phone,
+                    section = Section.Apps,
+                    checked = libPebbleConfig.watchConfig.proactivelyDownloadAppUpdates,
+                    onCheckChanged = {
+                        libPebble.updateConfig(
+                            libPebbleConfig.copy(
+                                watchConfig = libPebbleConfig.watchConfig.copy(
+                                    proactivelyDownloadAppUpdates = it
+                                )
+                            )
+                        )
+                    },
+                ),
+                basicSettingsToggleItem(
+                    title = "Download app updates on Wi-Fi only",
+                    description = "Only pre-download app updates while on Wi-Fi",
+                    topLevelType = TopLevelType.Phone,
+                    section = Section.Apps,
+                    checked = libPebbleConfig.watchConfig.appUpdateDownloadWifiOnly,
+                    onCheckChanged = {
+                        libPebble.updateConfig(
+                            libPebbleConfig.copy(
+                                watchConfig = libPebbleConfig.watchConfig.copy(
+                                    appUpdateDownloadWifiOnly = it
+                                )
+                            )
+                        )
+                    },
+                    show = { libPebbleConfig.watchConfig.proactivelyDownloadAppUpdates },
+                ),
+                basicSettingsToggleItem(
                     title = "Emulate Timeline Webservice",
                     description = "Intercept calls to Timeline webservice, instead inserting pins locally, immediately",
                     topLevelType = TopLevelType.Phone,
