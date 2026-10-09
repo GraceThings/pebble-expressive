@@ -1,5 +1,6 @@
 package coredevices.util.transcription
 
+import co.touchlab.kermit.Logger
 import coredevices.util.hasSpeechRecognitionAuthorization
 import coredevices.util.models.ModelDownloadStatus
 import coredevices.util.models.inProgress
@@ -56,6 +57,7 @@ object NativeSpeechAnalyzerBridge {
 
 /** Apple SpeechAnalyzer/SpeechTranscriber (iOS 26+) via the Swift bridge. */
 actual class PlatformSpeechRecognizer {
+    private val logger = Logger.withTag("PlatformSpeechRecognizer")
     // The system caps concurrent SpeechAnalyzer sessions; serialize like Cactus does.
     private val mutex = Mutex()
     private val _downloadStatus = MutableStateFlow<ModelDownloadStatus>(ModelDownloadStatus.Idle)
@@ -97,6 +99,7 @@ actual class PlatformSpeechRecognizer {
             _downloadStatus.value = if (error == null) {
                 ModelDownloadStatus.Idle
             } else {
+                logger.w { "Platform speech model download failed: $error" }
                 ModelDownloadStatus.Failed(PLATFORM_STT_MODEL_NAME, error)
             }
         }
