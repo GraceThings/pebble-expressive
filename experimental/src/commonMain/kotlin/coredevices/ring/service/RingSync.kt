@@ -625,14 +625,29 @@ class RingSync(
                                                             )
                                                         }
                                                         val transfer = withContext(Dispatchers.IO) {
-                                                            ringTransferRepository.getLastValidTransferByStartIndex(
-                                                                ringRxIndex
-                                                            )
+                                                            ringTransferRepository.getLastValidTransferByStartIndex(ringRxIndex)
+                                                                ?: run {
+                                                                    // Best-effort flush of a buffer left over from before a re-pair or
+                                                                    // rollover; its transfer row is no longer in the current iteration.
+                                                                    val stale = ringTransferRepository.failStartedTransfersAtStartIndex(ringRxIndex)
+                                                                    logger.w {
+                                                                        "No pending transfer found for completed transfer w/ start index $ringRxIndex, " +
+                                                                                "saving $audioDuration seconds as a partial recording" +
+                                                                                " (marked stale transfers ${stale.map { it.id }} as failed)"
+                                                                    }
+                                                                    val newId = ringTransferRepository.createRingTransfer(
+                                                                        advertisementReceived = stale.lastOrNull()?.transferInfo?.advertisementReceived
+                                                                            ?.let { Instant.fromEpochMilliseconds(it) }
+                                                                            ?: transferCompleteTimestamp,
+                                                                        startIndex = ringRxIndex,
+                                                                    )
+                                                                    ringTransferRepository.getRingTransferById(newId)!!
+                                                                }
                                                         }
                                                         val latency = buttonReleaseTimestamp
                                                             ?.let {
                                                                 val pressT = it - audioDuration.seconds
-                                                                transfer?.transferInfo?.advertisementReceived?.let { advT ->
+                                                                transfer.transferInfo?.advertisementReceived?.let { advT ->
                                                                     (advT - pressT.toEpochMilliseconds())
                                                                 }
                                                             }
@@ -644,7 +659,6 @@ class RingSync(
                                                             transferStatus.collectionStartCount.toInt(),
                                                             transferStatus.collectionIndex
                                                         )
-                                                        transfer ?: error("Expected to find existing transfer for start index $ringRxIndex")
                                                         val transferInfo = transfer.transferInfo!!.copy(
                                                             collectionEndIndex = transferStatus.collectionIndex,
                                                             buttonPressed = buttonReleaseTimestamp?.let { it - audioDuration.seconds }?.toEpochMilliseconds(),
