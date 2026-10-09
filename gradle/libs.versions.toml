@@ -113,6 +113,7 @@ kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
+room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }

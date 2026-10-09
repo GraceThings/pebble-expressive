@@ -90,7 +90,7 @@ import kotlin.uuid.Uuid
         RecordingFeedItem::class,
         RingTransferFeedItem::class
     ],
-    version = 39,
+    version = 40,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -137,6 +137,8 @@ import kotlin.uuid.Uuid
         AutoMigration(from = 37, to = 38),
         // 38→39: adds RecordingEntryEntity.transcribedViaLocalFallback.
         AutoMigration(from = 38, to = 39),
+        // 39→40: RecordingProcessingTaskEntity.transferId FK SET NULL → CASCADE.
+        AutoMigration(from = 39, to = 40, Migrate39To40::class),
     ]
 )
 @TypeConverters(Converters::class)
@@ -264,6 +266,18 @@ class Migrate36To37(isAndroid: Boolean) : Migration(36, 37) {
         connection.execSQL("DROP TABLE `BuiltinMcpGroupAssociation`")
         connection.execSQL("DROP TABLE `HttpMcpGroupAssociation`")
         connection.execSQL("DROP TABLE `McpSandboxGroupEntity`")
+    }
+}
+
+/**
+ * Drops audio tasks whose transfer was already deleted under the old SET NULL FK; they can't be
+ * processed and fail to load.
+ */
+class Migrate39To40 : AutoMigrationSpec {
+    override fun onPostMigrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "DELETE FROM RecordingProcessingTaskEntity WHERE type = 'AudioRecording' AND transferId IS NULL"
+        )
     }
 }
 
