@@ -486,7 +486,7 @@ fun IndexSettings(coreNav: CoreNav) {
                 )
             }
 
-            if (debugDetailsEnabled || platform.isSecondaryProfile) {
+            if (debugDetailsEnabled || platform.isSecondaryProfile || coreConfig.disableRingBluetoothSync) {
                 item {
                     SettingsRow(
                         title = "Disable Bluetooth Sync",
