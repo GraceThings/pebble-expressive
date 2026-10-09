@@ -27,8 +27,8 @@ import io.rebble.libpebblecommon.metadata.WatchHardwarePlatform
 import io.rebble.libpebblecommon.services.FirmwareVersion
 import io.rebble.libpebblecommon.services.WatchInfo
 import io.rebble.libpebblecommon.web.FirmwareUpdateManager
-import com.russhwolf.settings.PropertiesSettings
-import java.util.Properties
+import android.content.ContextWrapper
+import com.russhwolf.settings.MapSettings
 import io.rebble.libpebblecommon.web.LockerModel
 import io.rebble.libpebblecommon.web.LockerModelWrapper
 import kotlinx.coroutines.CompletableDeferred
@@ -284,7 +284,7 @@ class WatchManagerTest {
             override suspend fun deleteSyncRecordsForStaleDevices() {
             }
         }
-        val testSettings = PropertiesSettings(Properties())
+        val testSettings = MapSettings()
         return WatchManager(
             knownWatchDao = knownWatchDao,
             pebbleDeviceFactory = pebbleDeviceFactory,
@@ -300,7 +300,7 @@ class WatchManagerTest {
             analytics = analytics,
             blobDbDatabaseManager = blobDbManager,
             settings = testSettings,
-            appContext = AppContext(),
+            appContext = AppContext(ContextWrapper(null)),
             legacyBtClassicMigrator = LegacyBtClassicMigrator(
                 knownWatchDao = knownWatchDao,
                 settings = testSettings,
