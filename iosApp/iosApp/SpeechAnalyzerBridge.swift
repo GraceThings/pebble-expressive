@@ -69,6 +69,10 @@ enum SpeechAnalyzerBridge {
                         completion(String(describing: error))
                     }
                 }
+            },
+            releaseUnusedReservations: { localeTag in
+                guard #available(iOS 26.0, *) else { return }
+                Task { await releaseUnusedReservations(localeTag: localeTag) }
             }
         )
         Task {
@@ -171,6 +175,17 @@ enum SpeechAnalyzerBridge {
             return status
         }
         return AssetStatus(await AssetInventory.status(forModules: [engine.module]))
+    }
+
+    /// Reservations count against `AssetInventory.maximumReservedLocales`, so drop the ones for
+    /// languages no longer configured.
+    @available(iOS 26.0, *)
+    private static func releaseUnusedReservations(localeTag: String?) async {
+        let requested = localeTag.map { Locale(identifier: $0) } ?? Locale.current
+        let keep = Set(await candidateEngines(for: requested).map { $0.locale.identifier(.bcp47) })
+        for locale in await AssetInventory.reservedLocales where !keep.contains(locale.identifier(.bcp47)) {
+            await AssetInventory.release(reservedLocale: locale)
+        }
     }
 
     @available(iOS 26.0, *)

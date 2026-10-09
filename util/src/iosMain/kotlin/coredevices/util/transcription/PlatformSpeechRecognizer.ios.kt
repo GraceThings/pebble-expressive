@@ -43,6 +43,9 @@ object NativeSpeechAnalyzerBridge {
     @Volatile
     var downloadAssets: ((localeTag: String?, onProgress: (Double) -> Unit, completion: (String?) -> Unit) -> Unit)? = null
 
+    @Volatile
+    var releaseUnusedReservations: ((localeTag: String?) -> Unit)? = null
+
     /** Populated once the Swift side finishes its async locale query, shortly after launch. */
     val supportedLanguageTags = MutableStateFlow<List<String>>(emptyList())
 
@@ -104,6 +107,10 @@ actual class PlatformSpeechRecognizer {
             }
         }
         return true
+    }
+
+    actual fun releaseUnusedModels(languageTag: String?) {
+        NativeSpeechAnalyzerBridge.releaseUnusedReservations?.invoke(languageTag?.let { toBcp47(it, null) })
     }
 
     actual suspend fun transcribe(pcm: ByteArray, sampleRate: Int, languageTag: String?): String {

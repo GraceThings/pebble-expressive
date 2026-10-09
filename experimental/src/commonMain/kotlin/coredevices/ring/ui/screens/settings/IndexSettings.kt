@@ -412,6 +412,7 @@ fun IndexSettings(coreNav: CoreNav) {
                                 sttConfig = coreConfig.sttConfig.copy(spokenLanguage = language)
                             )
                         )
+                        platformSpeechRecognizer.releaseUnusedModels(language)
                     },
                     onRequireSignIn = { showSignInDialog = true },
                     onShowModelDownload = { coreNav.navigateTo(CommonRoutes.SpeechModelDownloadDialog) },

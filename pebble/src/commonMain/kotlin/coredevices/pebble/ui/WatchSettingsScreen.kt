@@ -391,6 +391,7 @@ fun rememberSettingsItemsState(navBarNav: NavBarNav?, snackbarDisplay: SnackbarD
                         sttConfig = coreConfig.sttConfig.copy(spokenLanguage = code)
                     )
                 )
+                platformSpeechRecognizer.releaseUnusedModels(code)
                 showSpokenLanguageDialog = false
                 if (coreConfig.sttConfig.mode == CactusSTTMode.PlatformOnly) {
                     scope.launch {
