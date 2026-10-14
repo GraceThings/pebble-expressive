@@ -6,6 +6,7 @@ import com.russhwolf.settings.Settings
 import coredevices.CoreBackgroundSync
 import coredevices.EnableExperimentalDevices
 import coredevices.analytics.CoreAnalytics
+import coredevices.analytics.HeartbeatMetricsSource
 import coredevices.analytics.RealCoreAnalytics
 import coredevices.api.EngDashOtaApi
 import coredevices.api.EngDashOtaApiImpl
@@ -82,7 +83,7 @@ val utilModule = module {
     singleOf(::DoneInitialOnboarding)
     single { SecondaryProfileWarning(get(), get<coredevices.util.Platform>().isSecondaryProfile) }
     singleOf(::AppUpdateTracker)
-    singleOf(::RealCoreAnalytics) bind CoreAnalytics::class
+    single { RealCoreAnalytics(get(), get(), get(), metricsSources = { getAll<HeartbeatMetricsSource>() }) } bind CoreAnalytics::class
     single { getCoreRoomDatabase(get()) }
     single { get<CoreDatabase>().analyticsDao() }
     single { get<CoreDatabase>().appstoreSourceDao() }

@@ -38,6 +38,7 @@ private const val KEY_RING_LIFETIME_COLLECTION_COUNT_SERIAL = "coreanalytics_rin
 private const val KEY_RING_BATTERY_VOLTAGE = "coreanalytics_ring_battery_voltage"
 private const val KEY_HEARTBEAT_COUNTER_PREFIX = "coreanalytics_counter_"
 private const val KEY_HEARTBEAT_COUNTER_START_TIMESTAMP = "coreanalytics_counter_start_timestamp"
+private const val KEY_LAST_HEARTBEAT_TIMESTAMP = "coreanalytics_last_heartbeat_timestamp"
 
 const val HEARTBEAT_COUNTER_PLUGIN_INVOCATIONS = "plugin.invocation_count"
 const val HEARTBEAT_COUNTER_PLUGIN_OBSERVATIONS = "plugin.observation_count"
@@ -52,6 +53,7 @@ class RealCoreAnalytics(
     private val analyticsBackend: AnalyticsBackend,
     private val heartbeatStateDao: HeartbeatStateDao,
     private val clock: Clock,
+    private val metricsSources: () -> List<HeartbeatMetricsSource> = { emptyList() },
 ) : CoreAnalytics {
     private val logger = Logger.withTag("RealCoreAnalytics")
     // We can't see libpebble from util right now, so it has to be this way around
@@ -74,6 +76,17 @@ class RealCoreAnalytics(
         if (duration < 22.hours) {
             logger.d { "Not processing heartbeat; duration is only $duration" }
             return
+        }
+        val now = clock.now()
+        val since = withContext(Dispatchers.IO) { cache.getLong(KEY_LAST_HEARTBEAT_TIMESTAMP, -1L) }
+            .takeIf { it != -1L }?.let { Instant.fromEpochMilliseconds(it) } ?: (now - duration)
+        val sourceMetrics = metricsSources().flatMap { source ->
+            try {
+                source.heartbeatMetrics(since, now)
+            } catch (e: Exception) {
+                logger.w(e) { "Heartbeat metrics source failed: $source" }
+                emptyList()
+            }
         }
         val heartbeatMetrics = processHeartbeatStates() +
                 HeartbeatMetric("heartbeat_duration_ms", duration.inWholeMilliseconds) +
@@ -110,7 +123,8 @@ class RealCoreAnalytics(
                             cache.getInt(KEY_HEARTBEAT_COUNTER_PREFIX + name, 0)
                         }
                     )
-                }
+                } +
+                sourceMetrics
         logger.d { "processHeartbeat: $heartbeatMetrics" }
         withContext(Dispatchers.IO) {
             cache.remove(KEY_RING_TRANSFER_DURATION_TOTAL_MS)
@@ -120,6 +134,7 @@ class RealCoreAnalytics(
             cache.remove(KEY_RING_BATTERY_VOLTAGE)
             cache.remove(KEY_HEARTBEAT_COUNTER_START_TIMESTAMP)
             HEARTBEAT_COUNTERS.forEach { cache.remove(KEY_HEARTBEAT_COUNTER_PREFIX + it) }
+            cache[KEY_LAST_HEARTBEAT_TIMESTAMP] = now.toEpochMilliseconds()
         }
         logEvent("heartbeat", heartbeatMetrics.associate { it.name to it.value })
     }

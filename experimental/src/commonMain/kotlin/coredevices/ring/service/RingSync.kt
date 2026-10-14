@@ -915,7 +915,7 @@ class RingSync(
             appendLine("Name: ${it.name}")
             appendLine("Last Seen: ${it.lastAdvertisement?.timestamp}")
             appendLine("Last RSSI: ${it.lastAdvertisement?.rssi}")
-            appendLine("Last RX RSSI: ${state?.rxRSSI}")
+            appendLine("Last RX RSSI: ${state?.rxRSSI} (measured ${state?.rxRSSITimestamp})")
             appendLine("Battery Voltage: ${batteryVoltage.replayCache.firstOrNull()?.second ?: "<unknown>"} mV")
             appendLine("isInCollectionState: ${state?.isInCollectionState}")
             appendLine("isNearby: ${state?.isNearby}")

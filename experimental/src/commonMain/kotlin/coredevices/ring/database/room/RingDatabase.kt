@@ -41,6 +41,7 @@ import coredevices.ring.data.entity.room.CachedRecordingMetadata
 import coredevices.ring.data.entity.room.PluginGrantDenial
 import coredevices.ring.data.entity.room.RecordingProcessingTaskEntity
 import coredevices.ring.data.entity.room.RingDebugTransfer
+import coredevices.ring.data.entity.room.RingRssiReading
 import coredevices.ring.data.entity.room.indexfeed.CachedItem
 import coredevices.ring.data.entity.room.indexfeed.CachedList
 import coredevices.libindex.database.entity.RingTransfer
@@ -54,6 +55,7 @@ import coredevices.ring.database.room.dao.LocalReminderDao
 import coredevices.ring.database.room.dao.PluginGrantDao
 import coredevices.ring.database.room.dao.RecordingProcessingTaskDao
 import coredevices.ring.database.room.dao.RingDebugTransferDao
+import coredevices.ring.database.room.dao.RingRssiReadingDao
 import coredevices.libindex.database.dao.RingTransferDao
 import coredevices.libindex.database.dao.RingTransferFeedItem
 import coredevices.ring.database.room.dao.TraceEntryDao
@@ -85,12 +87,13 @@ import kotlin.uuid.Uuid
         CachedList::class,
         PluginGrantDenial::class,
         AgentIterationEntity::class,
+        RingRssiReading::class,
     ],
     views = [
         RecordingFeedItem::class,
         RingTransferFeedItem::class
     ],
-    version = 40,
+    version = 41,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -139,6 +142,8 @@ import kotlin.uuid.Uuid
         AutoMigration(from = 38, to = 39),
         // 39→40: RecordingProcessingTaskEntity.transferId FK SET NULL → CASCADE.
         AutoMigration(from = 39, to = 40, Migrate39To40::class),
+        // 40→41: adds RingRssiReading.
+        AutoMigration(from = 40, to = 41),
     ]
 )
 @TypeConverters(Converters::class)
@@ -160,6 +165,7 @@ abstract class RingDatabase: RoomDatabase() {
     abstract fun cachedListDao(): CachedListDao
     abstract fun pluginGrantDao(): PluginGrantDao
     abstract fun agentIterationDao(): AgentIterationDao
+    abstract fun ringRssiReadingDao(): RingRssiReadingDao
 }
 
 @DeleteColumn("LocalReminderData", "platformId")

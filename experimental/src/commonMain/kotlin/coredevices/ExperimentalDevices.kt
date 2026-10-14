@@ -13,6 +13,7 @@ import coredevices.ring.bugreport.IndexRebootLogEntry
 import coredevices.ring.bugreport.IndexRebootLogStore
 import coredevices.ring.bugreport.IndexSettingsSummary
 import coredevices.ring.bugreport.RecentRecordingExport
+import coredevices.ring.bugreport.RingRssiStatistics
 import coredevices.ring.database.Preferences
 import coredevices.ring.database.room.repository.RecordingRepository
 import coredevices.ring.service.RingSync
@@ -60,6 +61,7 @@ class ExperimentalDevices(
     private val defaultListsBootstrap: coredevices.ring.service.indexfeed.DefaultListsBootstrap,
     private val indexSettingsSummary: IndexSettingsSummary,
     private val rebootLogStore: IndexRebootLogStore,
+    private val rssiStatistics: RingRssiStatistics,
     private val platform: Platform,
     private val targetCalendarSeeder: TargetCalendarSeeder,
 ) {
@@ -214,6 +216,9 @@ class ExperimentalDevices(
             }
             append(runCatching { indexSettingsSummary.summary() }
                 .getOrElse { "\nIndex Settings unavailable: ${it.message}" })
+            append("\n")
+            append(runCatching { rssiStatistics.summary() }
+                .getOrElse { "Ring Rx RSSI statistics unavailable: ${it.message}\n" })
         }
     }
 }

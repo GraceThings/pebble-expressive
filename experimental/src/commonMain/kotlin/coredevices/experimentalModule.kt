@@ -92,6 +92,8 @@ import coredevices.ring.util.trace.TraceSessionExporter
 import coredevices.ring.viewmodelModule
 import coredevices.util.CommonBuildKonfig
 import coredevices.ring.bugreport.IndexRebootLogStore
+import coredevices.ring.bugreport.RingRssiStatistics
+import coredevices.analytics.HeartbeatMetricsSource
 import coredevices.ring.bugreport.IndexSettingsSummary
 import coredevices.util.PermissionRequester
 import coredevices.util.sync.SyncHandler
@@ -181,6 +183,9 @@ val experimentalModule = module {
     single {
         get<RingDatabase>().agentIterationDao()
     }
+    single {
+        get<RingDatabase>().ringRssiReadingDao()
+    }
     singleOf(::PluginGrantRepository)
     singleOf(::RecordingRepository)
     single {
@@ -254,6 +259,7 @@ val experimentalModule = module {
     singleOf(::RingPairing)
     singleOf(::IndexSettingsSummary)
     singleOf(::IndexRebootLogStore)
+    single { RingRssiStatistics(get()) } bind HeartbeatMetricsSource::class
     singleOf(::ExperimentalDevices)
     single { TargetCalendarSeeder(get(), get<LibPebble>(), get()) }
     singleOf(::PrefsCollectionIndexStorage) bind CollectionIndexStorage::class
