@@ -1094,7 +1094,7 @@ private fun PluginMetadata.builtInIcon(): ImageVector = when (name) {
 private fun BuiltInPluginCarousel(plugins: List<PluginMetadata>) {
     Column {
         Text(
-            "My Plugins",
+            "Built-in Plugins",
             fontSize = 24.sp,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
