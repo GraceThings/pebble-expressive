@@ -5,10 +5,13 @@ import coredevices.analytics.CoreAnalytics
 import coredevices.firestore.UsersDao
 import coredevices.haversine.BluetoothFailureReason
 import coredevices.haversine.DataDecodeException
+import coredevices.haversine.KMPHaversineAdvertisement
 import coredevices.haversine.KMPHaversineSatellite
 import coredevices.haversine.KMPHaversineSatelliteManager
 import coredevices.haversine.SatelliteStatus
 import coredevices.haversine.TransferStatus
+import coredevices.haversine.fingerprintMatchesFailsafe
+import coredevices.haversine.fingerprintMatchesPTF
 import coredevices.haversine.removeDCBias
 import coredevices.resampler.Resampler
 import coredevices.libindex.database.entity.RingTransferStatus
@@ -161,6 +164,7 @@ class RingSync(
     }
     private var syncJob: Job? = null
     private val saveSemaphore = Semaphore(permits = 8)
+    private val pairingKeyMonitor = RingPairingKeyMonitor(prefs)
     private val _lastRing: MutableStateFlow<KMPHaversineSatellite?> = MutableStateFlow(null)
     val lastRing = _lastRing.asStateFlow()
 
@@ -235,6 +239,21 @@ class RingSync(
         return filename
     }
 
+    private fun isPairedRing(id: String): Boolean =
+        prefs.ringPaired.value?.replace(":", "").equals(id.replace(":", ""), ignoreCase = true)
+
+    private suspend fun checkPairingKeyHash(satelliteManager: KMPHaversineSatelliteManager, advertisement: KMPHaversineAdvertisement) {
+        if (!isPairedRing(advertisement.id)) return
+        val fingerprint = advertisement.cacheableStateFingerprint ?: return
+        if (fingerprintMatchesFailsafe(fingerprint) || fingerprintMatchesPTF(fingerprint)) return
+        val satellite = satelliteManager.lastRing.value?.takeIf { it.id.equals(advertisement.id, ignoreCase = true) }
+            ?: satelliteManager.getSatelliteById(advertisement.id)
+        val firmwareVersion = satellite?.state?.value?.firmwareVersion ?: return
+        if (pairingKeyMonitor.onAdvertisement(firmwareVersion, advertisement.pairingKeyHash)) {
+            _ringEvents.emit(RingEvent.BluetoothPeerPairingIssue(ringId = advertisement.id))
+        }
+    }
+
     @OptIn(FlowPreview::class)
     fun startSyncJob(satelliteManager: KMPHaversineSatelliteManager) {
         logger.d { "startSyncJob()" }
@@ -252,6 +271,9 @@ class RingSync(
             }
             launch {
                 indexNotificationManager.processRingSyncTransferNotifications(ringEvents)
+            }
+            launch {
+                satelliteManager.advertisements.collect { checkPairingKeyHash(satelliteManager, it) }
             }
             launch(Dispatchers.IO) {
                 lifetimeCollectionCount.debounce(1.seconds).collect {
@@ -315,6 +337,14 @@ class RingSync(
                                             logger.d { "Status ${satelliteStatus.transferStatus} $t lastRSSI = ${satelliteStatus.satellite.lastAdvertisement?.rssi} lastRxRSSI = ${satelliteStatus.satellite.state.value?.rxRSSI}" }
                                             val transferStatus = satelliteStatus.transferStatus
                                             buttonSequenceRecorder.onTransferStatus(transferStatus)
+                                            if (transferStatus !is TransferStatus.TransferFailed && isPairedRing(satelliteStatus.satellite.id)) {
+                                                satelliteStatus.satellite.state.value?.firmwareVersion?.let { firmwareVersion ->
+                                                    pairingKeyMonitor.onEncryptedLinkConfirmed(
+                                                        firmwareVersion,
+                                                        satelliteStatus.satellite.lastAdvertisement?.pairingKeyHash
+                                                    )
+                                                }
+                                            }
                                             if (transferStatus is TransferStatus.TransferComplete) {
                                                 withContext(Dispatchers.Default) {
                                                     removeDCBias(transferStatus.samples)
@@ -922,6 +952,8 @@ class RingSync(
             appendLine("isInFailsafeMode: ${state?.isInFailsafeMode}")
             appendLine("firmwareVersion: ${state?.firmwareVersion}")
             appendLine("truncatedCollectionCount: ${state?.truncatedCollectionCount}")
+            appendLine("pairingKeyHash: ${it.lastAdvertisement?.pairingKeyHash?.toPairingKeyHex()}")
+            appendLine("expectedPairingKeyHash: ${prefs.ringPairingKeyHash.value?.toPairingKeyHex()}")
         }
     }
 }
