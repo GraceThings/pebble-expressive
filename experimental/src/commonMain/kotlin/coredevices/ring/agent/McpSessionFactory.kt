@@ -1,6 +1,5 @@
 package coredevices.ring.agent
 
-import coredevices.analytics.CoreAnalytics
 import coredevices.indexai.data.entity.mcp.HttpMcpServerEntity
 import coredevices.mcp.client.HttpMcpIntegration
 import coredevices.mcp.client.HttpMcpProtocol
@@ -31,15 +30,14 @@ class McpSessionFactory(
     private val mcpServerCache: McpServerCache,
     private val plugins: Plugins,
     private val pluginGrants: PluginGrantRepository,
-    private val analytics: CoreAnalytics,
 ) {
     private suspend fun pluginsWith(grant: PluginGrant) =
         plugins.getAllPlugins().withGrant(grant, pluginGrants.disabledPluginsNow(grant))
 
     /** One integration per plugin granting actions, plus the sources servlet if any plugin grants those. */
     private suspend fun getPluginServers(): List<McpIntegration> {
-        val actions = pluginsWith(PluginGrant.Actions).map { PblPluginMcpIntegration(it, analytics) }
-        val sources = PluginsServlet({ pluginsWith(PluginGrant.Sources) }, analytics)
+        val actions = pluginsWith(PluginGrant.Actions).map { PblPluginMcpIntegration(it, plugins) }
+        val sources = PluginsServlet({ pluginsWith(PluginGrant.Sources) }, plugins)
             .takeIf { pluginsWith(PluginGrant.Sources).isNotEmpty() }
         return actions + listOfNotNull(sources)
     }

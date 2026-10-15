@@ -162,6 +162,9 @@ class AppPermissions(
     suspend fun request(appUuid: Uuid, permission: String, wait: Boolean = false): PermissionDecision =
         subjectOf(appUuid)?.let { request(it, permission, wait) } ?: PermissionDecision.Denied
 
+    suspend fun check(appUuid: Uuid, permission: String): PermissionDecision =
+        subjectOf(appUuid)?.let { check(it, permission) } ?: PermissionDecision.Denied
+
     suspend fun requestAll(
         subject: PermissionSubject,
         permissions: Collection<String>,

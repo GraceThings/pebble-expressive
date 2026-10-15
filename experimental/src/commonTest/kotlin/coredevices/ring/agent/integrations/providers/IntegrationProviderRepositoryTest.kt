@@ -10,6 +10,7 @@ import coredevices.ring.agent.integrations.NoteIntegration
 import coredevices.ring.agent.integrations.ReminderIntegration
 import coredevices.ring.agent.integrations.ReminderListEntry
 import coredevices.ring.agent.pebble_plugin.FakePlugin
+import coredevices.ring.agent.pebble_plugin.FakePlugins
 import coredevices.ring.agent.pebble_plugin.PblPluginIntegrationProvider
 import coredevices.ring.data.NoteShortcutType
 import coredevices.ring.data.entity.room.indexfeed.CachedItem
@@ -18,10 +19,7 @@ import coredevices.ring.database.room.dao.CachedItemDao
 import coredevices.ring.database.room.repository.ItemRepository
 import coredevices.ring.service.indexfeed.ItemFactory
 import coredevices.util.Platform
-import io.rebble.libpebblecommon.connection.Plugins
 import io.rebble.libpebblecommon.plugin.ActionDeclaration
-import io.rebble.libpebblecommon.plugin.ConfigMessageTarget
-import io.rebble.libpebblecommon.plugin.NativePlugin
 import io.rebble.libpebblecommon.plugin.Plugin
 import io.rebble.libpebblecommon.plugin.SourceDeclaration
 import io.rebble.libpebblecommon.plugin.SourceEnvelope
@@ -77,15 +75,6 @@ private class FakeProvider(
     override fun reminders(): ReminderIntegration = reminders
 }
 
-private class FakePlugins(private val plugins: List<Plugin>) : Plugins {
-    override fun registerPlugin(plugin: Plugin) {}
-    override fun nativePlugins(): Flow<List<NativePlugin>> = flowOf(emptyList())
-    override fun configMessageTarget(pluginUuid: String): ConfigMessageTarget? = null
-    override fun findSourcePlugin(category: String, item: String, preferredPluginUuid: String?): Plugin? = null
-    override fun findPlugin(pluginUuid: String): Plugin? = null
-    override fun getAllPlugins(): List<Plugin> = plugins
-}
-
 private class FakePlatform(override val name: String) : Platform {
     override val deviceModelName = "test"
     override suspend fun openUrl(url: String) {}
@@ -136,7 +125,7 @@ class IntegrationProviderRepositoryTest {
         plugins: List<Plugin> = emptyList(),
     ) = IntegrationProviderRepository(
         preferences = preferences,
-        plugins = FakePlugins(plugins),
+        plugins = FakePlugins(*plugins.toTypedArray()),
         platform = FakePlatform(platform),
         delegatedItems = DelegatedIntegrationItems(ItemFactory(), ItemRepository(FakeCachedItemDao(), cancelReminder = {})),
         builtIn = builtIn,

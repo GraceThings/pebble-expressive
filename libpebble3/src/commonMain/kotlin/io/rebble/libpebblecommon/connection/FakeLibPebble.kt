@@ -56,12 +56,17 @@ import io.rebble.libpebblecommon.notification.NotificationDecision
 import io.rebble.libpebblecommon.notification.VibePattern
 import io.rebble.libpebblecommon.packets.ProtocolCapsFlag
 import io.rebble.libpebblecommon.permissions.PluginDefinedPermission
+import io.rebble.libpebblecommon.plugin.ActionResult
 import io.rebble.libpebblecommon.plugin.ConfigMessageTarget
+import io.rebble.libpebblecommon.plugin.IconPixelSize
 import io.rebble.libpebblecommon.permissions.AppPermissionStatus
 import io.rebble.libpebblecommon.permissions.InstallReview
 import io.rebble.libpebblecommon.permissions.RequestedPermissions
-import io.rebble.libpebblecommon.plugin.NativePlugin
+import io.rebble.libpebblecommon.plugin.PluginCaller
 import io.rebble.libpebblecommon.plugin.Plugin
+import io.rebble.libpebblecommon.plugin.PluginErrors
+import io.rebble.libpebblecommon.plugin.PluginMetadata
+import io.rebble.libpebblecommon.plugin.SourceUpdate
 import io.rebble.libpebblecommon.protocolhelpers.PebblePacket
 import io.rebble.libpebblecommon.services.DailySleep
 import io.rebble.libpebblecommon.services.FirmwareVersion
@@ -85,6 +90,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.io.files.Path
+import kotlinx.serialization.json.JsonObject
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -382,6 +388,8 @@ class FakeLibPebble : LibPebble {
 
     override val analyticsEvents: Flow<AnalyticsEvent>
         get() = flow { }
+    override val heartbeatCounterIncrements: Flow<String>
+        get() = flow { }
     override val healthSettings: Flow<HealthSettings>
         get() = flow { emit(HealthSettings(
             heightMm = 1700,
@@ -514,18 +522,37 @@ class FakeLibPebble : LibPebble {
     override fun pluginPermissions(): Flow<Map<String, PluginDefinedPermission>> = flowOf(emptyMap())
 
 
-    override fun nativePlugins(): Flow<List<NativePlugin>> = flowOf(emptyList())
+    override fun nativePlugins(): Flow<List<PluginMetadata>> = flowOf(emptyList())
 
     override fun configMessageTarget(pluginUuid: String): ConfigMessageTarget? = null
 
-    override fun findSourcePlugin(
+    override fun getAllPlugins(): List<PluginMetadata> = emptyList()
+
+    override fun observe(
+        caller: PluginCaller,
+        plugin: PluginMetadata,
         category: String,
         item: String,
-        preferredPluginUuid: String?
-    ): Plugin? = null
+        properties: List<String>?,
+        iconPixelSize: IconPixelSize?,
+    ): Flow<SourceUpdate> = emptyFlow()
 
-    override fun findPlugin(pluginUuid: String): Plugin? = null
-    override fun getAllPlugins(): List<Plugin> = emptyList()
+    override suspend fun read(
+        caller: PluginCaller,
+        plugin: PluginMetadata,
+        category: String,
+        item: String,
+        properties: List<String>?,
+        timeout: Duration,
+    ): SourceUpdate = SourceUpdate.Error(PluginErrors.PLUGIN_UNAVAILABLE, "fake")
+
+    override suspend fun invoke(
+        caller: PluginCaller,
+        plugin: PluginMetadata,
+        action: String,
+        args: JsonObject,
+        timeout: Duration?,
+    ): ActionResult = ActionResult.error(PluginErrors.PLUGIN_UNAVAILABLE, "fake")
 
     override suspend fun getLatestTimestamp(): Long? = 0
 

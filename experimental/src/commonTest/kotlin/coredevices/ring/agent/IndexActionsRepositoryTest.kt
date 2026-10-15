@@ -53,7 +53,7 @@ class IndexActionsRepositoryTest {
             localAgentOnly = MutableStateFlow(localAgentOnly),
             calendarConnected = calendar,
             beeperUnavailable = beeper,
-            installedPlugins = { installed.toList() },
+            installedPlugins = { installed.map { it.metadata } },
             disabledPlugins = { disabledPlugins.getValue(it) },
             persistPluginGrantEnabled = { uuid, grant, enabled ->
                 val flow = disabledPlugins.getValue(grant)

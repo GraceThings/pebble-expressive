@@ -8,9 +8,9 @@ import kotlin.uuid.Uuid
 
 /**
  * A plugin exposes read-only *sources* (subscribed to via `Pebble.subscribeToSource`) and
- * write *actions* (fired via `Pebble.invokeAction`). Built-ins implement this directly and are
- * injected into the Koin `Set<Plugin>`; 3rd-party plugins are backed by JS (see [JsPlugin]).
- * See `new-plugin-api.md`.
+ * write *actions* (fired via `Pebble.invokeAction`). Built-ins implement [NativePlugin]; 3rd-party
+ * plugins are backed by JS (see [JsPlugin]). libpebble only hands out [metadata]; calls go
+ * through `Plugins`. See `new-plugin-api.md`.
  */
 interface Plugin {
     /** Stable identifier for this plugin. Built-ins use the reserved UUID namespace. */
@@ -27,9 +27,13 @@ interface Plugin {
     val actions: List<ActionDeclaration>
         get() = emptyList()
 
+    val metadata: PluginMetadata
+        get() = PluginMetadata(pluginUuid, name, description, sources, actions)
+
     /**
      * Observe one kind of thing. The returned flow emits whenever the underlying data changes;
-     * each emission is a complete envelope (zero or more instances, every property of each).
+     * each emission is a complete envelope (zero or more instances, every property of each), or
+     * an error that doesn't end the flow.
      *
      * [properties] is what the subscriber actually reads, and is a hint — a plugin may return
      * more, and should only use it to skip work that costs something (a second round trip).
@@ -38,17 +42,32 @@ interface Plugin {
      * [iconPixelSize] is the size the subscriber wants `icon`/`image` shapes at. Null means it
      * hasn't asked for them, and a plugin must not do the work of producing them: text and
      * numbers are free once fetched, bitmaps are not.
+     *
+     * [prompt]: whether the plugin's own permission checks may ask the user.
      */
     fun observe(
         category: String,
         item: String,
-        properties: List<String>? = null,
-        iconPixelSize: IconPixelSize? = null,
-    ): Flow<SourceEnvelope>
+        properties: List<String>?,
+        iconPixelSize: IconPixelSize?,
+        prompt: Boolean,
+    ): Flow<SourceUpdate>
 
-    suspend fun invoke(action: String, args: JsonObject): ActionResult =
-        ActionResult.error(PluginErrors.PLUGIN_UNAVAILABLE, "$name exposes no actions")
+    suspend fun invoke(action: String, args: JsonObject, prompt: Boolean): ActionResult
 
+    fun serves(category: String, item: String) = sources.any { it.serves(category, item) }
+
+    fun action(name: String) = actions.firstOrNull { it.name == name }
+}
+
+/** What a [Plugin] offers, without the means to call it. */
+data class PluginMetadata(
+    val pluginUuid: Uuid,
+    val name: String,
+    val description: String,
+    val sources: List<SourceDeclaration>,
+    val actions: List<ActionDeclaration>,
+) {
     fun serves(category: String, item: String) = sources.any { it.serves(category, item) }
 
     fun action(name: String) = actions.firstOrNull { it.name == name }
@@ -56,6 +75,11 @@ interface Plugin {
 
 @Serializable
 data class IconPixelSize(val w: Int, val h: Int)
+
+sealed interface SourceUpdate {
+    data class Data(val envelope: SourceEnvelope) : SourceUpdate
+    data class Error(val code: String, val message: String) : SourceUpdate
+}
 
 @Serializable
 data class SourceEnvelope(

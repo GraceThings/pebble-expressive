@@ -138,6 +138,7 @@ import io.rebble.libpebblecommon.plugin.PlatformPlugins
 import io.rebble.libpebblecommon.plugin.NativePlugin
 import io.rebble.libpebblecommon.plugin.LockerPluginLoader
 import io.rebble.libpebblecommon.plugin.PluginOAuthApi
+import io.rebble.libpebblecommon.plugin.PluginClient
 import io.rebble.libpebblecommon.plugin.PluginRegistry
 import io.rebble.libpebblecommon.plugin.WatchStatePlugin
 import io.rebble.libpebblecommon.plugin.WatchSettingsPlugin
@@ -476,6 +477,7 @@ fun initKoin(
                 singleOf(::RunningApps)
                 singleOf(::LockerInstalledApps) bind InstalledApps::class
                 singleOf(::AppPermissions)
+                singleOf(::PluginClient)
                 single { JsPluginFactory(get(), get(), get(), get(), get(), get(), pluginOAuthApi) }
                 singleOf(::BundledAppInstaller)
                 singleOf(::LockerPluginLoader)

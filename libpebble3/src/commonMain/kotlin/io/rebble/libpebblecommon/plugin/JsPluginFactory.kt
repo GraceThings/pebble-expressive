@@ -32,7 +32,7 @@ class JsPluginFactory(
         scope = scope,
         httpClient = httpClient,
         httpInterceptorManager = httpInterceptorManager,
-        networkAccess = NetworkGate(permissions, name, pluginUuid),
+        networkAccess = { prompt -> NetworkGate(permissions, name, pluginUuid, prompt) },
         runningApps = runningApps,
         oauthApi = oauthApi,
     )

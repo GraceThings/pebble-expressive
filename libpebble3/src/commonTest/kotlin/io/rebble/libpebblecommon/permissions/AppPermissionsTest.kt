@@ -44,15 +44,15 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-private val APP = Uuid.parse("00000000-0000-0000-0000-00000000a001")
+internal val APP = Uuid.parse("00000000-0000-0000-0000-00000000a001")
 
-private fun subject(
+internal fun subject(
     legacy: Boolean = false,
     hasAndroidCompanion: Boolean = false,
     hasCompanionApp: Boolean = false,
 ) = PermissionSubject(APP, legacy, hasAndroidCompanion, hasCompanionApp)
 
-private fun installedAs(
+internal fun installedAs(
     subject: PermissionSubject?,
     plugins: Flow<Map<String, PluginDefinedPermission>> = flowOf(emptyMap()),
 ) = object : InstalledApps {
@@ -331,7 +331,7 @@ class CanExfiltrateTest {
     }
 }
 
-private class FakePermissionDao : LockerAppPermissionDao {
+internal class FakePermissionDao : LockerAppPermissionDao {
     val rows = MutableStateFlow<Map<Pair<Uuid, String>, LockerAppPermission>>(emptyMap())
 
     override suspend fun insertOrReplace(permission: LockerAppPermission) {
@@ -370,19 +370,19 @@ private class FakePermissionDao : LockerAppPermissionDao {
     fun row(permission: String) = rows.value[APP to permission]
 }
 
-private class FixedClock(var ms: Long) : Clock {
+internal class FixedClock(var ms: Long) : Clock {
     override fun now(): Instant = Instant.fromEpochMilliseconds(ms)
 }
 
-private val testScope = LibPebbleCoroutineScope(EmptyCoroutineContext)
+internal val testScope = LibPebbleCoroutineScope(EmptyCoroutineContext)
 
-private object NoWatches : Watches {
+internal object NoWatches : Watches {
     override val watches = MutableStateFlow(emptyList<PebbleDevice>())
     override val connectionEvents = emptyFlow<PebbleConnectionEvent>()
     override fun watchesDebugState() = ""
 }
 
-private fun permissions(
+internal fun permissions(
     dao: LockerAppPermissionDao,
     config: WatchConfig = WatchConfig(enablePlugins = true),
     clock: Clock = FixedClock(1_000),
@@ -579,6 +579,16 @@ class NetworkGateTest {
         runCurrent()
         permissions.setDecisions(APP, mapOf(internetKey("config.example.com") to true))
         assertIs<PluginNetworkVerdict.Allowed>(verdict.await())
+    }
+
+    @Test
+    fun withoutPromptingAnUndecidedHostIsRefusedUnasked() = runTest {
+        val silent = NetworkGate(permissions, "App", APP, prompt = false)
+        assertIs<PluginNetworkVerdict.Denied>(silent.check("https://config.example.com/", wait = true))
+        assertEquals(emptyMap(), dao.rows.value)
+
+        permissions.setDecisions(APP, mapOf(internetKey("config.example.com") to true))
+        assertIs<PluginNetworkVerdict.Allowed>(silent.check("https://config.example.com/", wait = false))
     }
 
     @Test

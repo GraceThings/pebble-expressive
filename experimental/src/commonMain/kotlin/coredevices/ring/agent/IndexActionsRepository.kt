@@ -9,7 +9,7 @@ import coredevices.ring.agent.pebble_plugin.agentActions
 import coredevices.ring.agent.pebble_plugin.agentSources
 import coredevices.ring.agent.pebble_plugin.forAgent
 import coredevices.ring.agent.pebble_plugin.offers
-import io.rebble.libpebblecommon.plugin.Plugin
+import io.rebble.libpebblecommon.plugin.PluginMetadata
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -66,7 +66,7 @@ class IndexActionsRepository(
     private val localAgentOnly: Flow<Boolean>,
     private val calendarConnected: Flow<Boolean>,
     private val beeperUnavailable: Flow<String?>,
-    private val installedPlugins: () -> List<Plugin>,
+    private val installedPlugins: () -> List<PluginMetadata>,
     private val disabledPlugins: (PluginGrant) -> Flow<Set<Uuid>>,
     private val persistPluginGrantEnabled: suspend (pluginUuid: Uuid, grant: PluginGrant, enabled: Boolean) -> Unit,
 ) {
@@ -118,7 +118,7 @@ class IndexActionsRepository(
         setBuiltinEnabled(name, enabled)
 }
 
-private fun Plugin.grantState(
+private fun PluginMetadata.grantState(
     grant: PluginGrant,
     disabled: Set<Uuid>,
     disabledReason: String?,

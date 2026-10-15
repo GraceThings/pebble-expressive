@@ -118,6 +118,11 @@ class PebbleAppDelegate(
                 }
             }
             GlobalScope.launch {
+                libPebble.heartbeatCounterIncrements.collect {
+                    analytics.incrementHeartbeatCounter(it)
+                }
+            }
+            GlobalScope.launch {
                 libPebble.watches.mapNotNull { watches ->
                     watches.maxByOrNull { if (it is KnownPebbleDevice) it.lastConnected.epochSeconds else 0 }
                 }.filterIsInstance<KnownPebbleDevice>().distinctUntilChanged().collect { device ->

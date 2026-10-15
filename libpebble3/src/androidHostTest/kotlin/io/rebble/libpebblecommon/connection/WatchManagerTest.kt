@@ -279,6 +279,9 @@ class WatchManagerTest {
                 parameters: Map<String, String>
             ) {
             }
+
+            override fun incrementHeartbeatCounter(name: String) {
+            }
         }
         val blobDbManager = object : BlobDbDatabaseManager {
             override suspend fun deleteSyncRecordsForStaleDevices() {

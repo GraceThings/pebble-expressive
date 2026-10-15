@@ -107,7 +107,7 @@ import io.rebble.libpebblecommon.connection.AppContext
 import io.rebble.libpebblecommon.connection.ConnectedPebbleDevice
 import io.rebble.libpebblecommon.connection.LibPebble
 import io.rebble.libpebblecommon.permissions.InstallReview
-import io.rebble.libpebblecommon.plugin.NativePlugin
+import io.rebble.libpebblecommon.plugin.PluginMetadata
 import io.rebble.libpebblecommon.locker.AppType
 import io.rebble.libpebblecommon.locker.SystemApps
 import io.rebble.libpebblecommon.metadata.WatchType
@@ -1079,7 +1079,7 @@ val testApps = listOf(
 private val NATIVE_SCREENSHOT_HEIGHT = 100.dp
 
 // Built-in plugins have no pbw, so the UI maps each to an icon rather than reading one from a bundle.
-private fun NativePlugin.builtInIcon(): ImageVector = when (name) {
+private fun PluginMetadata.builtInIcon(): ImageVector = when (name) {
     "Music" -> Icons.Filled.MusicNote
     "Calendar" -> Icons.Filled.CalendarMonth
     "Weather" -> Icons.Filled.Cloud
@@ -1091,7 +1091,7 @@ private fun NativePlugin.builtInIcon(): ImageVector = when (name) {
 }
 
 @Composable
-private fun BuiltInPluginCarousel(plugins: List<NativePlugin>) {
+private fun BuiltInPluginCarousel(plugins: List<PluginMetadata>) {
     Column {
         Text(
             "My Plugins",
@@ -1111,7 +1111,7 @@ private fun BuiltInPluginCarousel(plugins: List<NativePlugin>) {
 }
 
 @Composable
-private fun NativePluginCard(plugin: NativePlugin) {
+private fun NativePluginCard(plugin: PluginMetadata) {
     Card(modifier = Modifier.padding(3.dp).width(100.dp)) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(

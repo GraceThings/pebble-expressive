@@ -16,6 +16,7 @@ import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders
 import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders.Obsidian
 import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders.Tasker
 import coredevices.ring.agent.pebble_plugin.FakePlugin
+import coredevices.ring.agent.pebble_plugin.FakePlugins
 import coredevices.ring.agent.pebble_plugin.PblPluginActionNoteIntegration
 import coredevices.ring.agent.pebble_plugin.PblPluginActionReminderIntegration
 import coredevices.ring.agent.pebble_plugin.PblPluginIntegrationProvider
@@ -189,7 +190,8 @@ class IndexActionsSectionTest {
                     SourceDeclaration(category = PblPluginActionNoteIntegration.CATEGORY, items = listOf("configured")),
                     SourceDeclaration(category = PblPluginActionReminderIntegration.CATEGORY, items = listOf("configured")),
                 ),
-            )
+            ).metadata,
+            FakePlugins(),
         )!!
         val withPage = setOf(plugin.pluginUuid)
 

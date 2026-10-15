@@ -41,7 +41,7 @@ class IntegrationProviderRepository(
 
     /** Every provider usable on this platform, connected or not. Plugins come and go, so not cached. */
     fun allProviders(): List<IntegrationProvider> =
-        builtIn + plugins.getAllPlugins().mapNotNull(PblPluginIntegrationProvider::forPlugin)
+        builtIn + plugins.getAllPlugins().mapNotNull { PblPluginIntegrationProvider.forPlugin(it, plugins) }
 
     fun providers(support: IntegrationSupport): List<IntegrationProvider> =
         allProviders().filter { support in it.supports }

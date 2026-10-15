@@ -9,6 +9,7 @@ import coredevices.util.emailOrNull
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import io.rebble.libpebblecommon.metadata.WatchHardwarePlatform
+import io.rebble.libpebblecommon.plugin.PluginHeartbeatCounters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,14 +41,8 @@ private const val KEY_HEARTBEAT_COUNTER_PREFIX = "coreanalytics_counter_"
 private const val KEY_HEARTBEAT_COUNTER_START_TIMESTAMP = "coreanalytics_counter_start_timestamp"
 private const val KEY_LAST_HEARTBEAT_TIMESTAMP = "coreanalytics_last_heartbeat_timestamp"
 
-const val HEARTBEAT_COUNTER_PLUGIN_INVOCATIONS = "plugin.invocation_count"
-const val HEARTBEAT_COUNTER_PLUGIN_OBSERVATIONS = "plugin.observation_count"
-
 /** Counters reset on every heartbeat; each is always reported, as 0 if untouched. */
-val HEARTBEAT_COUNTERS = listOf(
-    HEARTBEAT_COUNTER_PLUGIN_INVOCATIONS,
-    HEARTBEAT_COUNTER_PLUGIN_OBSERVATIONS,
-)
+val HEARTBEAT_COUNTERS = PluginHeartbeatCounters.all
 
 class RealCoreAnalytics(
     private val analyticsBackend: AnalyticsBackend,

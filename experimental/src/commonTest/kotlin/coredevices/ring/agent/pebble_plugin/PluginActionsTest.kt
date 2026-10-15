@@ -13,17 +13,17 @@ class PluginActionsTest {
         actions = listOf(ActionDeclaration(name = "create_todo"), ActionDeclaration(name = "create_note")),
         name = "Things",
         pluginUuid = Uuid.parse("00000000-0000-0000-0002-000000000001"),
-    )
+    ).metadata
     private val notes = FakePlugin(
         actions = listOf(ActionDeclaration(name = "create_note"), ActionDeclaration(name = "create_reminder")),
         name = "Notes",
         pluginUuid = Uuid.parse("00000000-0000-0000-0002-000000000002"),
-    )
+    ).metadata
     private val music = FakePlugin(
         actions = listOf(ActionDeclaration(name = "next")),
         name = "Music",
         pluginUuid = Uuid.parse("00000000-0000-0000-0002-000000000003"),
-    )
+    ).metadata
     private val weather = FakePlugin(
         name = "Weather",
         pluginUuid = Uuid.parse("00000000-0000-0000-0002-000000000004"),
@@ -31,8 +31,8 @@ class PluginActionsTest {
             SourceDeclaration(category = "weather", items = listOf("current", "forecast")),
             SourceDeclaration(category = "air", items = listOf("quality")),
         ),
-    )
-    private val empty = FakePlugin(name = "Empty")
+    ).metadata
+    private val empty = FakePlugin(name = "Empty").metadata
 
     @Test
     fun `destination actions are not agent actions`() {

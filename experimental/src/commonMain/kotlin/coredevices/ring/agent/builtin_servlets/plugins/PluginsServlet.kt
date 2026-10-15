@@ -1,18 +1,18 @@
 package coredevices.ring.agent.builtin_servlets.plugins
 
-import coredevices.analytics.CoreAnalytics
+import io.rebble.libpebblecommon.connection.Plugins
 import coredevices.mcp.SessionContext
 import coredevices.mcp.client.BuiltInMcpIntegration
-import io.rebble.libpebblecommon.plugin.Plugin
+import io.rebble.libpebblecommon.plugin.PluginMetadata
 
 /** Reads plugin data sources; [sourcePlugins] is re-evaluated on every call. */
 class PluginsServlet(
-    private val sourcePlugins: suspend () -> List<Plugin>,
-    analytics: CoreAnalytics,
+    private val sourcePlugins: suspend () -> List<PluginMetadata>,
+    plugins: Plugins,
 ): BuiltInMcpIntegration(
     name = NAME,
     tools = listOf(
-        ReadSourceTool(sourcePlugins, analytics)
+        ReadSourceTool(sourcePlugins, plugins)
     )
 ) {
     override suspend fun getExtraContext(sessionContext: SessionContext?): String? =
@@ -28,7 +28,7 @@ class PluginsServlet(
     }
 }
 
-internal fun List<Plugin>.describeSources(): String? {
+internal fun List<PluginMetadata>.describeSources(): String? {
     val lines = flatMap { plugin ->
         plugin.sources.flatMap { source ->
             source.items.map { item ->

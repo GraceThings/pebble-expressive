@@ -3,6 +3,7 @@ package coredevices.ring.agent.pebble_plugin
 import coredevices.ring.agent.integrations.providers.IntegrationSupport
 import io.rebble.libpebblecommon.plugin.ActionDeclaration
 import io.rebble.libpebblecommon.plugin.ActionResult
+import io.rebble.libpebblecommon.plugin.PluginCaller
 import io.rebble.libpebblecommon.plugin.PluginErrors
 import io.rebble.libpebblecommon.plugin.SourceDeclaration
 import io.rebble.libpebblecommon.plugin.SourceEnvelope
@@ -57,43 +58,46 @@ private fun configured(value: Boolean) = SourceEnvelope(
 )
 
 class PblPluginIntegrationProviderTest {
+    private val plugins = FakePlugins()
+
+    private fun providerFor(plugin: FakePlugin) = PblPluginIntegrationProvider.forPlugin(plugins.install(plugin), plugins)
 
     @Test
     fun pluginsWithoutNoteOrReminderActionsAreNotProviders() {
-        assertNull(PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(next))))
+        assertNull(providerFor(thingsPlugin(listOf(next))))
     }
 
     @Test
     fun supportFollowsTheDeclaredActions() {
         assertEquals(
             setOf(IntegrationSupport.Note),
-            PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(createNote, next)))?.supports
+            providerFor(thingsPlugin(listOf(createNote, next)))?.supports
         )
         assertEquals(
             setOf(IntegrationSupport.Note, IntegrationSupport.Reminder),
-            PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(createNote, createReminder)))?.supports
+            providerFor(thingsPlugin(listOf(createNote, createReminder)))?.supports
         )
     }
 
     @Test
     fun aKindNeedsItsConfiguredSourceAsWellAsTheAction() {
         assertNull(
-            PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(createNote), sources = emptyList()))
+            providerFor(thingsPlugin(listOf(createNote), sources = emptyList()))
         )
         assertEquals(
             setOf(IntegrationSupport.Reminder),
-            PblPluginIntegrationProvider.forPlugin(
+            providerFor(
                 thingsPlugin(listOf(createNote, createReminder), sources = listOf(configuredSource("reminders")))
             )?.supports
         )
         assertNull(
-            PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(next), sources = bothConfiguredSources))
+            providerFor(thingsPlugin(listOf(next), sources = bothConfiguredSources))
         )
     }
 
     @Test
     fun identityComesFromThePlugin() {
-        val provider = assertNotNull(PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(createNote))))
+        val provider = assertNotNull(providerFor(thingsPlugin(listOf(createNote))))
 
         assertEquals("plugin:$PLUGIN_UUID", provider.id)
         assertEquals("Things", provider.title)
@@ -102,9 +106,9 @@ class PblPluginIntegrationProviderTest {
 
     @Test
     fun providersForTheSamePluginAreEqual() {
-        val a = PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(createNote)))
-        val b = PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(createNote, createReminder)))
-        val other = PblPluginIntegrationProvider.forPlugin(
+        val a = providerFor(thingsPlugin(listOf(createNote)))
+        val b = providerFor(thingsPlugin(listOf(createNote, createReminder)))
+        val other = providerFor(
             thingsPlugin(listOf(createNote), pluginUuid = Uuid.parse("00000000-0000-0000-0002-00000000000e"))
         )
 
@@ -116,7 +120,7 @@ class PblPluginIntegrationProviderTest {
     @Test
     fun theConfiguredSourceDecidesWhetherAPluginIsConnected() = runTest {
         fun provider(value: Boolean) = assertNotNull(
-            PblPluginIntegrationProvider.forPlugin(
+            providerFor(
                 thingsPlugin(listOf(createNote), envelopes = mapOf("notes/configured" to configured(value)))
             )
         )
@@ -127,7 +131,7 @@ class PblPluginIntegrationProviderTest {
 
     @Test
     fun aConfiguredSourceThatNeverAnswersIsNotConnected() = runTest {
-        val provider = assertNotNull(PblPluginIntegrationProvider.forPlugin(thingsPlugin(listOf(createNote))))
+        val provider = assertNotNull(providerFor(thingsPlugin(listOf(createNote))))
 
         assertFalse(provider.isAuthorized())
     }
@@ -135,7 +139,7 @@ class PblPluginIntegrationProviderTest {
     @Test
     fun eachKindIsConnectedByItsOwnConfiguredSource() = runTest {
         val provider = assertNotNull(
-            PblPluginIntegrationProvider.forPlugin(
+            providerFor(
                 thingsPlugin(
                     listOf(createNote, createReminder),
                     envelopes = mapOf(
@@ -154,7 +158,7 @@ class PblPluginIntegrationProviderTest {
     @Test
     fun creatingANoteInvokesTheCreateNoteAction() = runTest {
         val plugin = thingsPlugin(listOf(createNote))
-        val provider = assertNotNull(PblPluginIntegrationProvider.forPlugin(plugin))
+        val provider = assertNotNull(providerFor(plugin))
 
         val id = assertIs<PblPluginActionNoteIntegration>(provider.notes()).createNote("buy milk")
 
@@ -170,8 +174,18 @@ class PblPluginIntegrationProviderTest {
         )
 
         val e = assertFailsWith<IllegalStateException> {
-            PblPluginActionNoteIntegration(plugin).createNote("buy milk")
+            PblPluginActionNoteIntegration(plugins.install(plugin), plugins).createNote("buy milk")
         }
         assertEquals("Text is required", e.message)
+    }
+
+    @Test
+    fun checkingTheConfiguredSourceIsAProbeButWritingIsNot() = runTest {
+        val provider = assertNotNull(providerFor(thingsPlugin(listOf(createNote))))
+
+        provider.isAuthorized()
+        provider.notes().createNote("buy milk")
+
+        assertEquals(listOf<PluginCaller>(PluginCaller.Host(probe = true), PluginCaller.Host()), plugins.callers)
     }
 }
