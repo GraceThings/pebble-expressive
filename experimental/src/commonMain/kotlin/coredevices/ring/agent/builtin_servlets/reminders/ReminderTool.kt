@@ -13,6 +13,7 @@ import coredevices.ring.agent.integrations.itemSource
 import coredevices.ring.agent.integrations.providers.IntegrationProviderRepository
 import coredevices.ring.agent.integrations.providers.externalDestination
 import coredevices.ring.ui.isLocale24HourFormat
+import coredevices.util.capitalizeFirstWord
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import io.modelcontextprotocol.kotlin.sdk.types.toJson
@@ -97,6 +98,7 @@ class ReminderTool: BuiltInMcpTool(
 
     override suspend fun call(jsonInput: String, context: SessionContext): ToolCallResult {
         val remindArgs = JsonSnake.decodeFromString<RemindArgs>(jsonInput)
+            .let { it.copy(message = it.message.capitalizeFirstWord()) }
         val instant = (remindArgs.date_time_human ?: remindArgs.duration_human)?.let { dateTimeHuman ->
             val tz = TimeZone.currentSystemDefault()
             // Anchor time resolution to when the user actually spoke. When that's unknown, only

@@ -16,6 +16,7 @@ import coredevices.ring.agent.integrations.providers.IntegrationProviderReposito
 import coredevices.ring.agent.integrations.providers.externalDestination
 import coredevices.ring.data.entity.room.indexfeed.CachedList
 import coredevices.ring.database.room.repository.ListRepository
+import coredevices.util.capitalizeFirstWord
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import io.modelcontextprotocol.kotlin.sdk.types.toJson
@@ -128,6 +129,7 @@ class ListTool: BuiltInMcpTool(
 
     override suspend fun call(jsonInput: String, context: SessionContext): ToolCallResult {
         val listItemArgs = JsonSnake.decodeFromString<ListItemArgs>(jsonInput)
+            .let { it.copy(message = it.message.capitalizeFirstWord()) }
         val instant = listItemArgs.reminder_date_time_human?.let {
             val tz = TimeZone.currentSystemDefault()
             // Anchor time resolution to when the user actually spoke. When that's unknown, only
