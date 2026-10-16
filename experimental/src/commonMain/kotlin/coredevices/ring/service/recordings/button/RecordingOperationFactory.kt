@@ -152,8 +152,7 @@ class RecordingOperationFactory(
     ): RecordingOperation {
         return when (destination) {
             GestureDestination.IndexAgent,
-            GestureDestination.LocalAgent,
-            GestureDestination.RemoteAgent -> {
+            GestureDestination.LocalAgent -> {
                 DefaultRecordingOperation(
                     mcpSessionFactory = mcpSessionFactory,
                     chatAgent = agentFactory.createForChatMode(textChatModeFor(destination)),
@@ -198,7 +197,6 @@ internal fun webhookNeedsOwnTranscription(
 internal fun textChatModeFor(destination: GestureDestination.Recording): ChatMode = when (destination) {
     GestureDestination.WebSearch -> ChatMode.Search
     GestureDestination.LocalAgent -> ChatMode.Local
-    GestureDestination.RemoteAgent -> ChatMode.Remote
     GestureDestination.IndexAgent,
     GestureDestination.WebhookOnly,
     GestureDestination.Nothing -> ChatMode.Normal

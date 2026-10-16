@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlin.uuid.Uuid
 
 const val LOCAL_MODEL_REASON = "Not supported by the Local agent"
-const val LOCAL_MODEL_MCP_REASON = "Remote MCP servers need the Hybrid Index agent"
+const val LOCAL_MODEL_MCP_REASON = "Remote MCP servers need the Index agent"
 const val NOT_CONNECTED_REASON = "Not connected"
 
 /** A built-in action as shown in the top level Index settings list. */

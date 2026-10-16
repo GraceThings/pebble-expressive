@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PlayArrow
@@ -91,7 +90,6 @@ fun destinationsFor(kind: GestureKind): List<GestureDestination> = when (kind) {
     )
     GestureKind.Recording -> listOf(
         GestureDestination.IndexAgent,
-        GestureDestination.RemoteAgent,
         GestureDestination.LocalAgent,
         GestureDestination.WebSearch,
         GestureDestination.WebhookOnly,
@@ -111,9 +109,8 @@ val GestureDestination.tileLabel: String
     get() = when (this) {
         GestureDestination.PlayPause -> "Play/Pause"
         GestureDestination.NextTrack -> "Next track"
-        GestureDestination.IndexAgent -> "Hybrid Index agent"
+        GestureDestination.IndexAgent -> "Index agent"
         GestureDestination.LocalAgent -> "Local agent"
-        GestureDestination.RemoteAgent -> "Remote Index agent"
         GestureDestination.WebSearch -> "Web search"
         GestureDestination.WebhookOnly -> "Webhook only"
         GestureDestination.Nothing -> "Nothing"
@@ -130,7 +127,6 @@ private val GestureDestination.optionSub: String?
     get() = when (this) {
         GestureDestination.IndexAgent -> "Takes actions for you in the cloud, on this phone when offline"
         GestureDestination.LocalAgent -> "Runs on this phone only. Experimental, supports fewer actions"
-        GestureDestination.RemoteAgent -> "Takes actions for you in the cloud, needs a connection"
         GestureDestination.WebSearch -> "Answer lands in your feed"
         GestureDestination.WebhookOnly -> "Raw recording to your endpoint, nothing else"
         else -> null
@@ -142,7 +138,6 @@ private val GestureDestination.icon: ImageVector
         GestureDestination.NextTrack -> Icons.Default.SkipNext
         GestureDestination.IndexAgent -> Icons.Default.GraphicEq
         GestureDestination.LocalAgent -> Icons.Default.Smartphone
-        GestureDestination.RemoteAgent -> Icons.Default.Cloud
         GestureDestination.WebSearch -> Icons.Default.Search
         GestureDestination.WebhookOnly -> Icons.Default.Webhook
         GestureDestination.Nothing -> Icons.Default.Block
@@ -221,8 +216,7 @@ private fun GestureRow(
 ) {
     val recording = gesture.kind == GestureKind.Recording
     val isIndexAgent = destination == GestureDestination.IndexAgent ||
-        destination == GestureDestination.LocalAgent ||
-        destination == GestureDestination.RemoteAgent
+        destination == GestureDestination.LocalAgent
     val colors = IndexTheme.colors
     val accent = colors.primary
     Row(

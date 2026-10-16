@@ -38,7 +38,6 @@ class ButtonSwitchboardTest {
         assertEquals(
             listOf(
                 GestureDestination.IndexAgent,
-                GestureDestination.RemoteAgent,
                 GestureDestination.LocalAgent,
                 GestureDestination.WebSearch,
                 GestureDestination.WebhookOnly,

@@ -109,11 +109,7 @@ import kotlin.uuid.Uuid
 
 /** Actions are only reachable through an Index agent, so they are off when no gesture routes to one. */
 internal fun nothingRoutesToIndexAgent(routes: Map<RingGesture, GestureDestination>): Boolean =
-    routes.values.none {
-        it == GestureDestination.IndexAgent ||
-            it == GestureDestination.LocalAgent ||
-            it == GestureDestination.RemoteAgent
-    }
+    routes.values.none { it == GestureDestination.IndexAgent || it == GestureDestination.LocalAgent }
 
 internal fun captureTypeLabel(type: DefaultCaptureType): String = type.title.lowercase()
 
@@ -975,7 +971,7 @@ private fun NoIndexAgentCard() {
         Text(
             buildAnnotatedString {
                 append("Nothing routes to the Index agent right now, so actions are off. Point a gesture at ")
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("Hybrid Index agent") }
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("Index agent") }
                 append(" above to turn them back on.")
             },
             fontSize = 13.sp,

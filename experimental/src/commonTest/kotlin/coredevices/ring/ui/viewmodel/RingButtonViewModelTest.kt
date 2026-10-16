@@ -50,7 +50,6 @@ class RingButtonViewModelTest {
     fun otherDestinationsDoNotTouchTheLmModel() = runTest {
         val fixture = Fixture(this)
 
-        fixture.viewModel.setGestureRoute(RingGesture.Hold, GestureDestination.RemoteAgent)
         fixture.viewModel.setGestureRoute(RingGesture.Hold, GestureDestination.WebSearch)
         fixture.viewModel.setGestureRoute(RingGesture.Hold, GestureDestination.WebhookOnly)
         fixture.viewModel.setGestureRoute(RingGesture.Hold, GestureDestination.Nothing)

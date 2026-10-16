@@ -24,14 +24,6 @@ class TextChatModeTest {
     }
 
     @Test
-    fun remoteAgentRouteRunsTheCloudAgent() {
-        assertEquals(
-            ChatMode.Remote,
-            textChatModeFor(GestureDestination.RemoteAgent),
-        )
-    }
-
-    @Test
     fun webSearchRouteRunsTheSearchAgent() {
         assertEquals(
             ChatMode.Search,

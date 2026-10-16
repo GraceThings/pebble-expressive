@@ -62,18 +62,15 @@ class IndexActionsSectionTest {
     }
 
     @Test
-    fun `info card hidden when a recording gesture routes to the local or remote agent`() {
-        listOf(GestureDestination.LocalAgent, GestureDestination.RemoteAgent).forEach { agent ->
-            assertFalse(
-                nothingRoutesToIndexAgent(
-                    mapOf(
-                        RingGesture.Hold to agent,
-                        RingGesture.ClickHold to GestureDestination.WebSearch,
-                    )
-                ),
-                "$agent",
+    fun `info card hidden when a recording gesture routes to the local agent`() {
+        assertFalse(
+            nothingRoutesToIndexAgent(
+                mapOf(
+                    RingGesture.Hold to GestureDestination.LocalAgent,
+                    RingGesture.ClickHold to GestureDestination.WebSearch,
+                )
             )
-        }
+        )
     }
 
     @Test
