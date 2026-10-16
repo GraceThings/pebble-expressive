@@ -106,6 +106,7 @@ fun IndexAgentActionsSection(
         onConfigurePlugin = { uuid, title ->
             coreNav.navigateTo(CommonRoutes.WatchappSettingsRoute(uuid = uuid.toString(), title = title))
         },
+        onOpenPluginPage = { uuid -> coreNav.navigateTo(CommonRoutes.LockerAppRoute(uuid = uuid.toString())) },
         onOpenBeeperContacts = viewModel::showContactsDialog,
         onGetMoreActions = {},
         onProvidersChanged = viewModel::refreshAvailableProviders,

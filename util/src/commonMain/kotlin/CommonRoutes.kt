@@ -50,6 +50,9 @@ object CommonRoutes {
     ) : CoreRoute
 
     @Serializable
+    data class LockerAppRoute(val uuid: String) : CoreRoute
+
+    @Serializable
     data object RingOnboardingRoute : CoreRoute
 
     /** Dialog offering to download the on-device speech model the configured engine needs.

@@ -161,7 +161,7 @@ internal fun reminderDestOptions(
 internal fun storeDestOptions(plugins: List<StorePlugin>, support: IntegrationSupport): List<StorePlugin> =
     plugins.filter { support in it.supports }
 
-/** Plugins with a config page reopen it, as the locker's Settings button does. */
+/** Plugins with a config page open their locker page from a hold, where the locker's Settings button lives. */
 internal fun IntegrationProvider.isConfigurablePlugin(configurablePlugins: Set<Uuid>): Boolean =
     this is PblPluginIntegrationProvider && pluginUuid in configurablePlugins
 
@@ -304,6 +304,7 @@ internal fun IndexActionsSection(
     onInstallStorePlugin: suspend (StorePlugin, granted: Map<String, Boolean?>) -> Boolean,
     onAddIntegration: () -> Unit,
     onConfigurePlugin: (uuid: Uuid, title: String) -> Unit,
+    onOpenPluginPage: (uuid: Uuid) -> Unit,
     onOpenBeeperContacts: () -> Unit,
     onGetMoreActions: () -> Unit,
     onProvidersChanged: () -> Unit,
@@ -404,7 +405,7 @@ internal fun IndexActionsSection(
             PluginRow(
                 plugin = plugin,
                 onConfigure = if (plugin.pluginUuid in configurablePlugins) {
-                    { onConfigurePlugin(plugin.pluginUuid, plugin.title) }
+                    { onOpenPluginPage(plugin.pluginUuid) }
                 } else {
                     null
                 },
@@ -475,7 +476,7 @@ internal fun IndexActionsSection(
             },
             onConfigure = { provider ->
                 when (provider) {
-                    is PblPluginIntegrationProvider -> onConfigurePlugin(provider.pluginUuid, provider.title)
+                    is PblPluginIntegrationProvider -> onOpenPluginPage(provider.pluginUuid)
                     else -> noteConfigureDialog(provider)?.let { dialog = it }
                 }
             },
@@ -500,7 +501,7 @@ internal fun IndexActionsSection(
                 connectStorePlugin(plugin)
             },
             onConfigure = { provider ->
-                if (provider is PblPluginIntegrationProvider) onConfigurePlugin(provider.pluginUuid, provider.title)
+                if (provider is PblPluginIntegrationProvider) onOpenPluginPage(provider.pluginUuid)
             },
             onDismiss = { sheet = null },
         )

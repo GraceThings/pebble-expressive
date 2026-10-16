@@ -30,6 +30,7 @@ import coredevices.coreapp.ui.screens.WatchOnboardingScreen
 import coredevices.pebble.PebbleDeepLinkHandler
 import coredevices.pebble.ui.PebbleRoutes
 import coredevices.pebble.ui.addPebbleRoutes
+import coredevices.pebble.ui.toNavBarRoute
 import coredevices.ring.ui.navigation.addRingRoutes
 import coredevices.ring.ui.screens.IndexScreen
 import coredevices.ring.ui.theme.IndexThemeHost
@@ -88,6 +89,10 @@ fun AppNavHost(navController: NavHostController, startDestination: Any) {
     val coreNav = remember {
         object : CoreNav {
             override fun navigateTo(route: CoreRoute) {
+                if (route is CommonRoutes.LockerAppRoute) {
+                    pebbleDeepLinks.navigateToTab(route.toNavBarRoute())
+                    return
+                }
                 if (route == PebbleRoutes.WatchHomeRoute) {
                     navController.popBackStack(CommonRoutes.OnboardingRoute, true)
                 }

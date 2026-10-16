@@ -35,6 +35,9 @@ object PebbleRoutes {
     ) : CoreRoute
 }
 
+fun CommonRoutes.LockerAppRoute.toNavBarRoute(): PebbleNavBarRoutes.LockerAppRoute =
+    PebbleNavBarRoutes.LockerAppRoute(uuid = uuid, storedId = null, storeSource = null)
+
 @Stable
 interface NavBarNav {
     fun navigateTo(route: CoreRoute)
