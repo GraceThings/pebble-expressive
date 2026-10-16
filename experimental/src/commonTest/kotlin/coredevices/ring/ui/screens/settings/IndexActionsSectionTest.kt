@@ -15,12 +15,15 @@ import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders
 import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders.Notion
 import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders.Obsidian
 import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders.Tasker
+import coredevices.ring.agent.integrations.providers.IntegrationSupport
+import coredevices.ring.agent.integrations.providers.visibleDestinations
 import coredevices.ring.agent.pebble_plugin.FakePlugin
 import coredevices.ring.agent.pebble_plugin.FakePlugins
 import coredevices.ring.agent.pebble_plugin.PblPluginActionNoteIntegration
 import coredevices.ring.agent.pebble_plugin.PblPluginActionReminderIntegration
 import coredevices.ring.agent.pebble_plugin.PblPluginIntegrationProvider
 import coredevices.ring.agent.pebble_plugin.PluginGrant
+import coredevices.ring.agent.pebble_plugin.StorePlugin
 import coredevices.ring.service.button.GestureDestination
 import coredevices.ring.service.button.RingGesture
 import io.rebble.libpebblecommon.plugin.ActionDeclaration
@@ -200,6 +203,52 @@ class IndexActionsSectionTest {
         assertFalse(noteDestOptions(listOf(plugin), listOf(plugin)).single().configurable)
         assertFalse(noteDestOptions(listOf(plugin), emptyList(), withPage).single().configurable)
         assertFalse(reminderDestOptions(listOf(GoogleTasks), listOf(GoogleTasks), withPage).single().configurable)
+    }
+
+    private fun thingsPlugin(vararg kinds: IntegrationSupport) = FakePlugin(
+        actions = kinds.map {
+            ActionDeclaration(
+                name = when (it) {
+                    IntegrationSupport.Note -> PblPluginActionNoteIntegration.ACTION_NAME
+                    IntegrationSupport.Reminder -> PblPluginActionReminderIntegration.ACTION_NAME
+                }
+            )
+        },
+        name = "Things",
+        sources = kinds.map {
+            SourceDeclaration(
+                category = when (it) {
+                    IntegrationSupport.Note -> PblPluginActionNoteIntegration.CATEGORY
+                    IntegrationSupport.Reminder -> PblPluginActionReminderIntegration.CATEGORY
+                },
+                items = listOf("configured"),
+            )
+        },
+    )
+
+    @Test
+    fun `with plugins on only the built-in feed, Obsidian and plugins are offered`() {
+        val plugin = PblPluginIntegrationProvider.forPlugin(thingsPlugin(IntegrationSupport.Note).metadata, FakePlugins())!!
+        val all = listOf(Index, Notion, Obsidian, GoogleTasks, IosReminders, Tasker, plugin)
+
+        assertEquals(listOf(Index, Obsidian, plugin), all.visibleDestinations(pluginsEnabled = true))
+        assertEquals(all, all.visibleDestinations(pluginsEnabled = false))
+    }
+
+    @Test
+    fun `store plugins are offered for the kinds their manifest can take`() {
+        val notes = StorePlugin(thingsPlugin(IntegrationSupport.Note).metadata, configurable = true)
+        val both = StorePlugin(
+            thingsPlugin(IntegrationSupport.Note, IntegrationSupport.Reminder).metadata,
+            configurable = false,
+        )
+        val neither = StorePlugin(FakePlugin(name = "Music").metadata, configurable = false)
+        val listed = listOf(notes, both, neither)
+
+        assertEquals(listOf(notes, both), storeDestOptions(listed, IntegrationSupport.Note))
+        assertEquals(listOf(both), storeDestOptions(listed, IntegrationSupport.Reminder))
+        assertEquals("Things", notes.title)
+        assertEquals(setOf(IntegrationSupport.Note), notes.supports)
     }
 
     @Test

@@ -52,3 +52,13 @@ val IntegrationProvider.supportsReminders: Boolean get() = IntegrationSupport.Re
 
 /** Where an action's result was sent, for display; null when the item is stored locally. */
 val IntegrationProvider.externalDestination: String? get() = title.takeUnless { storesItemsLocally }
+
+/**
+ * With plugins on, store plugins stand in for some of the currently native options.
+ */
+fun List<IntegrationProvider>.visibleDestinations(pluginsEnabled: Boolean): List<IntegrationProvider> =
+    if (pluginsEnabled) {
+        filter { it.storesItemsLocally || it == BuiltInIntegrationProviders.Obsidian || it.isExternalPlugin }
+    } else {
+        this
+    }

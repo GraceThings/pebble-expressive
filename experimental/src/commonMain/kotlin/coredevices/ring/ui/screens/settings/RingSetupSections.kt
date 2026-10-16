@@ -60,6 +60,8 @@ fun IndexAgentActionsSection(coreNav: CoreNav, viewModel: SettingsViewModel, sho
     val availableNoteProviders by viewModel.availableNoteProviders.collectAsState()
     val availableReminderProviders by viewModel.availableReminderProviders.collectAsState()
     val configurablePlugins by viewModel.configurablePlugins.collectAsState()
+    val pluginsEnabled by viewModel.pluginsEnabled.collectAsState()
+    val storePlugins by viewModel.storePlugins.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.refreshAvailableProviders() }
     IndexActionsSection(
@@ -71,6 +73,8 @@ fun IndexAgentActionsSection(coreNav: CoreNav, viewModel: SettingsViewModel, sho
         availableNoteProviders = availableNoteProviders,
         availableReminderProviders = availableReminderProviders,
         configurablePlugins = configurablePlugins,
+        pluginsEnabled = pluginsEnabled,
+        storePlugins = storePlugins,
         onSetActionEnabled = viewModel::setActionEnabled,
         onSetPluginGrantEnabled = viewModel::setPluginGrantEnabled,
         onSetHttpServerEnabled = viewModel::setHttpServerEnabled,

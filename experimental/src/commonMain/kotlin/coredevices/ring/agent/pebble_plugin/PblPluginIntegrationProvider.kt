@@ -44,15 +44,18 @@ class PblPluginIntegrationProvider private constructor(
 
         /** Null when the plugin offers neither kind. */
         fun forPlugin(plugin: PluginMetadata, plugins: Plugins): PblPluginIntegrationProvider? {
-            val supports = buildSet {
-                if (plugin.offersDestination(PblPluginActionNoteIntegration.ACTION_NAME, PblPluginActionNoteIntegration.CATEGORY)) {
-                    add(IntegrationSupport.Note)
-                }
-                if (plugin.offersDestination(PblPluginActionReminderIntegration.ACTION_NAME, PblPluginActionReminderIntegration.CATEGORY)) {
-                    add(IntegrationSupport.Reminder)
-                }
-            }
+            val supports = destinationSupports(plugin)
             return if (supports.isEmpty()) null else PblPluginIntegrationProvider(plugin, plugins, supports)
+        }
+
+        /** The kinds [plugin] can be a destination for, whether or not it is installed. */
+        fun destinationSupports(plugin: PluginMetadata): Set<IntegrationSupport> = buildSet {
+            if (plugin.offersDestination(PblPluginActionNoteIntegration.ACTION_NAME, PblPluginActionNoteIntegration.CATEGORY)) {
+                add(IntegrationSupport.Note)
+            }
+            if (plugin.offersDestination(PblPluginActionReminderIntegration.ACTION_NAME, PblPluginActionReminderIntegration.CATEGORY)) {
+                add(IntegrationSupport.Reminder)
+            }
         }
 
         private fun PluginMetadata.offersDestination(action: String, category: String): Boolean =

@@ -59,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withCompositionLocal
 import androidx.compose.ui.Alignment
@@ -92,8 +93,11 @@ import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders
 import coredevices.ring.agent.integrations.providers.IntegrationProvider
 import coredevices.ring.agent.integrations.providers.IntegrationProviderRepository
 import coredevices.ring.agent.integrations.providers.IntegrationSupport
+import coredevices.ring.agent.integrations.providers.visibleDestinations
 import coredevices.ring.agent.pebble_plugin.PblPluginIntegrationProvider
 import coredevices.ring.agent.pebble_plugin.PluginGrant
+import coredevices.ring.agent.pebble_plugin.PluginStore
+import coredevices.ring.agent.pebble_plugin.StorePlugin
 import coredevices.indexai.data.entity.mcp.HttpMcpServerEntity
 import coredevices.ring.database.Preferences
 import coredevices.ring.service.button.GestureDestination
@@ -104,6 +108,8 @@ import coredevices.ring.ui.screens.settings.mcp.HttpServerEditDialog
 import coredevices.ring.ui.theme.IndexTheme
 import coredevices.ring.ui.theme.toggleButtonColors
 import coredevices.ui.M3Dialog
+import io.rebble.libpebblecommon.permissions.InstallReview
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import kotlin.uuid.Uuid
 
@@ -160,6 +166,10 @@ internal fun reminderDestOptions(
     val connected = it in available
     DestOption(it, it.remindersTitle, connected, connected && it.isConfigurablePlugin(configurablePlugins))
 }
+
+/** Store plugins that could take this kind once installed, listed after the installed options. */
+internal fun storeDestOptions(plugins: List<StorePlugin>, support: IntegrationSupport): List<StorePlugin> =
+    plugins.filter { support in it.supports }
 
 /** Plugins with a config page reopen it, as the locker's Settings button does. */
 internal fun IntegrationProvider.isConfigurablePlugin(configurablePlugins: Set<Uuid>): Boolean =
@@ -282,6 +292,8 @@ fun IndexActionsSection(
     availableNoteProviders: List<IntegrationProvider>,
     availableReminderProviders: List<IntegrationProvider>,
     configurablePlugins: Set<Uuid>,
+    pluginsEnabled: Boolean,
+    storePlugins: List<StorePlugin>,
     onSetActionEnabled: (name: String, enabled: Boolean) -> Unit,
     onSetPluginGrantEnabled: (uuid: Uuid, grant: PluginGrant, enabled: Boolean) -> Unit,
     onSetHttpServerEnabled: (server: HttpMcpServerEntity, enabled: Boolean) -> Unit,
@@ -303,7 +315,9 @@ fun IndexActionsSection(
 
     val preferences = koinInject<Preferences>()
     val providers = koinInject<IntegrationProviderRepository>()
+    val pluginStore = koinInject<PluginStore>()
     val colors = IndexTheme.colors
+    val scope = rememberCoroutineScope()
 
     val captureType by preferences.defaultCaptureType.collectAsState()
     val noteProvider by providers.selectedNoteProvider.collectAsState()
@@ -314,23 +328,45 @@ fun IndexActionsSection(
     var editingServer by remember { mutableStateOf<HttpMcpServerEntity?>(null) }
     // Connecting from a destination sheet is a pick as well as a connect, but the connect dialogs
     // only report dismissal, so the choice is applied once the provider shows up as available.
-    var pendingNoteConnect by remember { mutableStateOf<IntegrationProvider?>(null) }
-    var pendingReminderConnect by remember { mutableStateOf<IntegrationProvider?>(null) }
+    // Held by id: a store plugin has no provider until it is installed.
+    var pendingNoteConnect by remember { mutableStateOf<String?>(null) }
+    var pendingReminderConnect by remember { mutableStateOf<String?>(null) }
+    var storeReview by remember { mutableStateOf<Pair<StorePlugin, InstallReview>?>(null) }
+    var installFailed by remember { mutableStateOf<StorePlugin?>(null) }
     val closeConnectDialog = {
         dialog = null
         onProvidersChanged()
     }
 
     LaunchedEffect(availableNoteProviders) {
-        pendingNoteConnect?.takeIf { it in availableNoteProviders }?.let {
+        availableNoteProviders.firstOrNull { it.id == pendingNoteConnect }?.let {
             providers.selectNoteProvider(it)
             pendingNoteConnect = null
         }
     }
     LaunchedEffect(availableReminderProviders) {
-        pendingReminderConnect?.takeIf { it in availableReminderProviders }?.let {
+        availableReminderProviders.firstOrNull { it.id == pendingReminderConnect }?.let {
             providers.selectReminderProvider(it)
             pendingReminderConnect = null
+        }
+    }
+
+    // Installing from the sheet behaves like connecting an installed plugin: the config page opens.
+    fun installStorePlugin(plugin: StorePlugin, granted: Map<String, Boolean?>) {
+        scope.launch {
+            val installed = pluginStore.install(plugin.pluginUuid, granted)
+            onProvidersChanged()
+            if (!installed) {
+                installFailed = plugin
+            } else if (plugin.configurable) {
+                onConfigurePlugin(plugin.pluginUuid, plugin.title)
+            }
+        }
+    }
+    fun connectStorePlugin(plugin: StorePlugin) {
+        scope.launch {
+            val review = pluginStore.reviewInstall(plugin.pluginUuid)
+            if (review == null) installStorePlugin(plugin, emptyMap()) else storeReview = plugin to review
         }
     }
 
@@ -449,21 +485,26 @@ fun IndexActionsSection(
             icon = Icons.Default.EditNote,
             title = "Where notes save",
             options = noteDestOptions(
-                providers.providers(IntegrationSupport.Note),
+                providers.providers(IntegrationSupport.Note).visibleDestinations(pluginsEnabled),
                 availableNoteProviders,
                 configurablePlugins,
             ),
+            storePlugins = storeDestOptions(storePlugins, IntegrationSupport.Note),
             selected = noteProvider,
             onSelect = {
                 pendingNoteConnect = null
                 providers.selectNoteProvider(it)
             },
             onConnect = { provider ->
-                pendingNoteConnect = provider
+                pendingNoteConnect = provider.id
                 when (provider) {
                     is PblPluginIntegrationProvider -> onConfigurePlugin(provider.pluginUuid, provider.title)
                     else -> noteConnectDialog(provider)?.let { dialog = it } ?: onAddIntegration()
                 }
+            },
+            onInstall = { plugin ->
+                pendingNoteConnect = PblPluginIntegrationProvider.idFor(plugin.pluginUuid)
+                connectStorePlugin(plugin)
             },
             onConfigure = { provider ->
                 when (provider) {
@@ -477,21 +518,26 @@ fun IndexActionsSection(
             icon = Icons.Default.Checklist,
             title = "Where reminders save",
             options = reminderDestOptions(
-                providers.providers(IntegrationSupport.Reminder),
+                providers.providers(IntegrationSupport.Reminder).visibleDestinations(pluginsEnabled),
                 availableReminderProviders,
                 configurablePlugins,
             ),
+            storePlugins = storeDestOptions(storePlugins, IntegrationSupport.Reminder),
             selected = reminderProvider,
             onSelect = {
                 pendingReminderConnect = null
                 providers.selectReminderProvider(it)
             },
             onConnect = { provider ->
-                pendingReminderConnect = provider
+                pendingReminderConnect = provider.id
                 when (provider) {
                     is PblPluginIntegrationProvider -> onConfigurePlugin(provider.pluginUuid, provider.title)
                     else -> reminderConnectDialog(provider)?.let { dialog = it } ?: onAddIntegration()
                 }
+            },
+            onInstall = { plugin ->
+                pendingReminderConnect = PblPluginIntegrationProvider.idFor(plugin.pluginUuid)
+                connectStorePlugin(plugin)
             },
             onConfigure = { provider ->
                 if (provider is PblPluginIntegrationProvider) onConfigurePlugin(provider.pluginUuid, provider.title)
@@ -499,6 +545,27 @@ fun IndexActionsSection(
             onDismiss = { sheet = null },
         )
         null -> {}
+    }
+
+    storeReview?.let { (plugin, review) ->
+        pluginStore.ReviewInstallDialog(review) { granted ->
+            storeReview = null
+            if (granted != null) installStorePlugin(plugin, granted)
+        }
+    }
+    installFailed?.let { plugin ->
+        M3Dialog(
+            onDismissRequest = { installFailed = null },
+            title = { Text("Couldn't add ${plugin.title}") },
+            buttons = { TextButton(onClick = { installFailed = null }) { Text("OK") } },
+        ) {
+            Text(
+                "Check your connection and try again.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = colors.onSurfaceVariant,
+            )
+        }
     }
 
     editingServer?.let { server ->
@@ -1057,13 +1124,13 @@ private fun SheetOptionRow(
 }
 
 @Composable
-private fun DestOptionTitle(option: DestOption) {
+private fun DestOptionTitle(title: String, plugin: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(option.title)
+        Text(title)
         Spacer(Modifier.width(4.dp))
-        if (option.provider.isExternalPlugin) {
+        if (plugin) {
             Icon(
                 Icons.Default.Extension,
                 contentDescription = "Plugin",
@@ -1080,9 +1147,11 @@ private fun DestinationSheet(
     icon: ImageVector,
     title: String,
     options: List<DestOption>,
+    storePlugins: List<StorePlugin>,
     selected: IntegrationProvider,
     onSelect: (IntegrationProvider) -> Unit,
     onConnect: (IntegrationProvider) -> Unit,
+    onInstall: (StorePlugin) -> Unit,
     onDismiss: () -> Unit,
     onConfigure: (IntegrationProvider) -> Unit = {},
 ) {
@@ -1117,7 +1186,7 @@ private fun DestinationSheet(
                     onConfigure(option.provider)
                 }
                 SheetOptionRow(
-                    title = { DestOptionTitle(option) },
+                    title = { DestOptionTitle(option.title, plugin = option.provider.isExternalPlugin) },
                     subtitle = when {
                         !option.connected -> "Not connected"
                         option.configurable -> "Hold to reconfigure"
@@ -1138,6 +1207,19 @@ private fun DestinationSheet(
                             TextButton(onClick = connect) { Text("Connect") }
                         }
                     },
+                )
+            }
+            storePlugins.forEach { plugin ->
+                val install = {
+                    onDismiss()
+                    onInstall(plugin)
+                }
+                SheetOptionRow(
+                    title = { DestOptionTitle(plugin.title, plugin = true) },
+                    subtitle = "Not connected",
+                    selected = false,
+                    onClick = install,
+                    trailing = { TextButton(onClick = install) { Text("Connect") } },
                 )
             }
         }
