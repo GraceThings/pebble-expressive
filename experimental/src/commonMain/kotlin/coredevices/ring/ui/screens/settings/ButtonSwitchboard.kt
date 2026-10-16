@@ -149,7 +149,7 @@ private val GestureDestination.icon: ImageVector
     }
 
 @Composable
-fun ButtonSwitchboard(
+internal fun ButtonSwitchboard(
     routes: Map<RingGesture, GestureDestination>,
     musicEnabled: Boolean,
     webhookConfigFor: (RingGesture) -> IndexWebhookConfig,

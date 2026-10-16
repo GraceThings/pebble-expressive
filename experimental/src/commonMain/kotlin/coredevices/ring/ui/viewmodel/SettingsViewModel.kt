@@ -7,7 +7,6 @@ import coredevices.libindex.device.IndexDeviceManager
 import coredevices.libindex.device.InterviewedIndexDevice
 import coredevices.libindex.device.KnownIndexDevice
 import coredevices.libindex.device.RSSIMeasurement
-import coredevices.libindex.di.LibIndexCoroutineScope
 import coredevices.ring.RingDelegate
 import coredevices.ring.agent.IndexActionsRepository
 import coredevices.ring.agent.integrations.providers.IntegrationProviderRepository
@@ -20,10 +19,6 @@ import coredevices.ring.data.NoteShortcutType
 import coredevices.indexai.data.entity.mcp.HttpMcpServerEntity
 import coredevices.ring.database.Preferences
 import coredevices.ring.database.room.repository.McpServerRepository
-import coredevices.ring.model.CactusModelProvider
-import coredevices.ring.service.button.GestureDestination
-import coredevices.ring.service.button.GestureRoutingPreferences
-import coredevices.ring.service.button.RingGesture
 import coredevices.util.CommonBuildKonfig
 import coredevices.util.emailOrNull
 import coredevices.util.flow.mapState
@@ -73,9 +68,6 @@ class SettingsViewModel(
     private val indexDeviceManager: IndexDeviceManager,
     private val mcpServerRepository: McpServerRepository,
     private val ringDelegate: RingDelegate,
-    private val cactusModelProvider: CactusModelProvider,
-    private val appScope: LibIndexCoroutineScope,
-    private val gestureRouting: GestureRoutingPreferences,
     private val indexActionsRepository: IndexActionsRepository,
     private val libPebble: LibPebble,
 ): ViewModel() {
@@ -84,7 +76,6 @@ class SettingsViewModel(
         .map { it?.emailOrNull }
         .stateIn(viewModelScope, SharingStarted.Lazily, Firebase.auth.currentUser?.email)
 
-    val gestureRoutes = gestureRouting.routes
     val debugDetailsEnabled = preferences.debugDetailsEnabled
     private val _showContactsDialog = MutableStateFlow(false)
     val showContactsDialog = _showContactsDialog.asStateFlow()
@@ -260,14 +251,6 @@ class SettingsViewModel(
         }
         .map { it.pluginUuid }
         .toSet()
-
-    fun setGestureRoute(gesture: RingGesture, destination: GestureDestination) {
-        gestureRouting.setRoute(gesture, destination)
-        if (destination == GestureDestination.LocalAgent || destination == GestureDestination.IndexAgent) {
-            // Trigger LM model extraction, should be already integrated into assets so no DL
-            appScope.launch { cactusModelProvider.getLMModelPath() }
-        }
-    }
 
     fun toggleDebugDetailsEnabled() {
         viewModelScope.launch {

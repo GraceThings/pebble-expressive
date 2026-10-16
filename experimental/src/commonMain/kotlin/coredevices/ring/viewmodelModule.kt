@@ -11,6 +11,7 @@ import coredevices.ring.ui.viewmodel.IndexFeedViewModel
 import coredevices.ring.ui.viewmodel.ListenDialogViewModel
 import coredevices.ring.ui.viewmodel.ObjectDetailViewModel
 import coredevices.ring.ui.viewmodel.RecordingDetailsViewModel
+import coredevices.ring.ui.viewmodel.RingButtonViewModel
 import coredevices.ring.ui.viewmodel.SettingsViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -23,6 +24,7 @@ internal val viewmodelModule = module {
     viewModelOf(::ObjectDetailViewModel)
     viewModelOf(::RecordingDetailsViewModel)
     viewModelOf(::SettingsViewModel)
+    viewModelOf(::RingButtonViewModel)
     viewModelOf(::BackupViewModel)
     viewModelOf(::EncryptionViewModel)
     viewModelOf(::ListenDialogViewModel)

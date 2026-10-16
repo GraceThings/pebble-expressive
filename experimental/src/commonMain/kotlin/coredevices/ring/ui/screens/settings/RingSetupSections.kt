@@ -7,14 +7,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import coredevices.ring.external.indexwebhook.IndexWebhookConfig
-import coredevices.ring.external.indexwebhook.IndexWebhookPreferences
 import coredevices.ring.external.indexwebhook.IndexWebhookSettingsViewModel
 import coredevices.ring.external.indexwebhook.IndexWebhookSheet
 import coredevices.ring.ui.navigation.RingRoutes
+import coredevices.ring.ui.viewmodel.RingButtonViewModel
 import coredevices.ring.ui.viewmodel.SettingsViewModel
-import coredevices.util.Platform
-import coredevices.util.isAndroid
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -24,20 +21,18 @@ import org.koin.compose.viewmodel.koinViewModel
  * also render [IndexWebhookSheetHost], or the webhook rows here open nothing.
  */
 @Composable
-fun RingButtonSection(viewModel: SettingsViewModel) {
-    val platform = koinInject<Platform>()
+fun RingButtonSection(viewModel: RingButtonViewModel = koinViewModel()) {
     val webhookViewModel = koinViewModel<IndexWebhookSettingsViewModel>()
-    val webhookPreferences = koinInject<IndexWebhookPreferences>()
     val gestureRoutes by viewModel.gestureRoutes.collectAsState()
-    val webhookConfigs by webhookPreferences.configs.collectAsState()
+    val webhookConfigs by viewModel.webhookConfigs.collectAsState()
 
     ButtonSwitchboard(
         routes = gestureRoutes,
-        musicEnabled = platform.isAndroid,
+        musicEnabled = viewModel.musicEnabled,
         webhookConfigFor = { webhookConfigs[it] ?: IndexWebhookConfig() },
         onSetRoute = viewModel::setGestureRoute,
         onOpenWebhookSettings = { webhookViewModel.openDialog(it) },
-        onDisableWebhook = { webhookPreferences.setEnabled(it, false) },
+        onDisableWebhook = viewModel::disableWebhook,
     )
 }
 

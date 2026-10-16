@@ -316,7 +316,7 @@ fun IndexSettings(coreNav: CoreNav) {
                     modifier = Modifier.padding(top = 18.dp, bottom = 2.dp, start = 16.dp, end = 16.dp)
                 )
             }
-            item { RingButtonSection(viewModel) }
+            item { RingButtonSection() }
 
             // --- Actions section ---
             item { IndexAgentActionsSection(coreNav, viewModel) }

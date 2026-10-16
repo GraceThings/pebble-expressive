@@ -69,6 +69,7 @@ import coredevices.ring.ui.screens.settings.GTasksDialog
 import coredevices.ring.ui.screens.settings.NotionDialog
 import coredevices.ring.ui.viewmodel.BackupViewModel
 import coredevices.ring.ui.viewmodel.EncryptionViewModel
+import coredevices.ring.ui.viewmodel.RingButtonViewModel
 import coredevices.ring.ui.viewmodel.SettingsViewModel
 import coredevices.ui.SignInDialog
 import coredevices.util.CoreConfigHolder
@@ -103,7 +104,8 @@ import theme.AppTheme
 @Composable
 internal fun SetupStep(
     coreNav: CoreNav,
-    viewModel: SettingsViewModel,
+    settingsViewModel: SettingsViewModel,
+    ringButtonViewModel: RingButtonViewModel,
     preferences: Preferences,
     snackbarDisplay: SnackbarDisplay,
     isAndroid: Boolean,
@@ -113,7 +115,7 @@ internal fun SetupStep(
 ) {
     BackHandler { onBack() }
     val palette = LocalPalette.current
-    val gestureRoutes by viewModel.gestureRoutes.collectAsState()
+    val gestureRoutes by ringButtonViewModel.gestureRoutes.collectAsState()
     val musicPresetSelected = { mode: MusicControlMode ->
         musicRoutesFor(mode).all { (gesture, destination) -> gestureRoutes[gesture] == destination }
     }
@@ -300,7 +302,7 @@ internal fun SetupStep(
             title = "Ring Button",
             sub = "Choose what each press does. You can change this later in Index settings.",
         ) {
-            RingButtonSection(viewModel)
+            RingButtonSection(ringButtonViewModel)
         }
 
         // 3 — Index agent actions
@@ -309,7 +311,7 @@ internal fun SetupStep(
             title = "Index Agent",
             sub = "Pick which actions Index can take, and where notes and reminders are saved."
         ) {
-            IndexAgentActionsSection(coreNav, viewModel, showHeader = false)
+            IndexAgentActionsSection(coreNav, settingsViewModel, showHeader = false)
         }
 
         // 4 — Secondary action
@@ -327,7 +329,7 @@ internal fun SetupStep(
                     pattern = PressPattern.None,
                     selected = gestureRoutes[RingGesture.ClickHold] == GestureDestination.IndexAgent,
                     onClick = {
-                        viewModel.setGestureRoute(RingGesture.ClickHold, GestureDestination.IndexAgent)
+                        ringButtonViewModel.setGestureRoute(RingGesture.ClickHold, GestureDestination.IndexAgent)
                     },
                     modifier = Modifier.weight(1f),
                 )
@@ -336,7 +338,7 @@ internal fun SetupStep(
                     pattern = PressPattern.ShortHold,
                     selected = gestureRoutes[RingGesture.ClickHold] == GestureDestination.WebSearch,
                     onClick = {
-                        viewModel.setGestureRoute(RingGesture.ClickHold, GestureDestination.WebSearch)
+                        ringButtonViewModel.setGestureRoute(RingGesture.ClickHold, GestureDestination.WebSearch)
                     },
                     modifier = Modifier.weight(1f),
                 )
