@@ -93,7 +93,7 @@ import kotlin.uuid.Uuid
         RecordingFeedItem::class,
         RingTransferFeedItem::class
     ],
-    version = 41,
+    version = 42,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -144,6 +144,8 @@ import kotlin.uuid.Uuid
         AutoMigration(from = 39, to = 40, Migrate39To40::class),
         // 40→41: adds RingRssiReading.
         AutoMigration(from = 40, to = 41),
+        // 41→42: adds HttpMcpServerEntity.description.
+        AutoMigration(from = 41, to = 42),
     ]
 )
 @TypeConverters(Converters::class)

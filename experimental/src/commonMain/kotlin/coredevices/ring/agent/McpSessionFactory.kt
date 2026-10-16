@@ -68,5 +68,6 @@ private fun HttpMcpServerEntity.toMcpIntegration(cache: McpServerCache): HttpMcp
         protocol = if (this.streamable) HttpMcpProtocol.Streaming else HttpMcpProtocol.Sse,
         authHeader = this.authHeader,
         cache = cache,
+        description = this.description?.takeIf { it.isNotBlank() },
     )
 }
