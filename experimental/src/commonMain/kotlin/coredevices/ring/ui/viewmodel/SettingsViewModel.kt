@@ -24,7 +24,6 @@ import coredevices.ring.model.CactusModelProvider
 import coredevices.ring.service.button.GestureDestination
 import coredevices.ring.service.button.GestureRoutingPreferences
 import coredevices.ring.service.button.RingGesture
-import coredevices.ui.ModelType
 import coredevices.util.CommonBuildKonfig
 import coredevices.util.emailOrNull
 import coredevices.util.flow.mapState
@@ -85,8 +84,6 @@ class SettingsViewModel(
         .map { it?.emailOrNull }
         .stateIn(viewModelScope, SharingStarted.Lazily, Firebase.auth.currentUser?.email)
 
-    private val _showModelDownloadDialog = MutableStateFlow<ModelType?>(null)
-    val showModelDownloadDialog = _showModelDownloadDialog.asStateFlow()
     val gestureRoutes = gestureRouting.routes
     val debugDetailsEnabled = preferences.debugDetailsEnabled
     private val _showContactsDialog = MutableStateFlow(false)
@@ -264,30 +261,12 @@ class SettingsViewModel(
         .map { it.pluginUuid }
         .toSet()
 
-    fun onModelDownloadDialogDismissed(success: Boolean) {
-        val wasDownloading = _showModelDownloadDialog.value ?: return
-        _showModelDownloadDialog.value = null
-        // appScope: pref write must land even if the user leaves Settings.
-        appScope.launch {
-            when (wasDownloading) {
-                is ModelType.Agent -> if (!success) {
-                    gestureRouting.rerouteAll(GestureDestination.LocalAgent, GestureDestination.IndexAgent)
-                }
-                is ModelType.STT -> preferences.setUseCactusTranscription(success)
-            }
-        }
-    }
-
     fun setGestureRoute(gesture: RingGesture, destination: GestureDestination) {
         gestureRouting.setRoute(gesture, destination)
         if (destination == GestureDestination.LocalAgent || destination == GestureDestination.IndexAgent) {
             // Trigger LM model extraction, should be already integrated into assets so no DL
             appScope.launch { cactusModelProvider.getLMModelPath() }
         }
-    }
-
-    fun setGestureRoutes(routes: Map<RingGesture, GestureDestination>) {
-        gestureRouting.setRoutes(routes)
     }
 
     fun toggleDebugDetailsEnabled() {
