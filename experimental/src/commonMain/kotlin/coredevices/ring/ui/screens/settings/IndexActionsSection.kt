@@ -54,8 +54,6 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,17 +89,13 @@ import coredevices.ring.agent.builtin_servlets.notes.NoteServlet
 import coredevices.ring.agent.builtin_servlets.reminders.ReminderServlet
 import coredevices.ring.agent.integrations.providers.BuiltInIntegrationProviders
 import coredevices.ring.agent.integrations.providers.IntegrationProvider
-import coredevices.ring.agent.integrations.providers.IntegrationProviderRepository
 import coredevices.ring.agent.integrations.providers.IntegrationSupport
-import coredevices.ring.agent.integrations.providers.visibleDestinations
 import coredevices.ring.agent.pebble_plugin.PblPluginIntegrationProvider
 import coredevices.ring.agent.pebble_plugin.PluginGrant
 import coredevices.ring.agent.pebble_plugin.PluginStore
 import coredevices.ring.agent.pebble_plugin.StorePlugin
 import coredevices.indexai.data.entity.mcp.HttpMcpServerEntity
-import coredevices.ring.database.Preferences
 import coredevices.ring.service.button.GestureDestination
-import coredevices.ring.service.button.GestureRoutingPreferences
 import coredevices.ring.service.button.RingGesture
 import coredevices.ring.ui.components.SectionHeader
 import coredevices.ring.ui.screens.settings.mcp.HttpServerEditDialog
@@ -284,21 +278,34 @@ internal enum class ActionsDialog {
 }
 
 @Composable
-fun IndexActionsSection(
+internal fun IndexActionsSection(
+    agentReachable: Boolean,
     actions: List<IndexAction>,
     plugins: List<IndexPlugin>,
     httpMcpServers: List<HttpMcpServerEntity>,
     httpMcpDisabledReason: String?,
+    captureType: DefaultCaptureType,
+    noteProvider: IntegrationProvider,
+    reminderProvider: IntegrationProvider,
+    approvedContactCount: Int,
+    noteDestinationProviders: List<IntegrationProvider>,
+    reminderDestinationProviders: List<IntegrationProvider>,
     availableNoteProviders: List<IntegrationProvider>,
     availableReminderProviders: List<IntegrationProvider>,
     configurablePlugins: Set<Uuid>,
-    pluginsEnabled: Boolean,
     storePlugins: List<StorePlugin>,
     onSetActionEnabled: (name: String, enabled: Boolean) -> Unit,
     onSetPluginGrantEnabled: (uuid: Uuid, grant: PluginGrant, enabled: Boolean) -> Unit,
     onSetHttpServerEnabled: (server: HttpMcpServerEntity, enabled: Boolean) -> Unit,
     onSaveHttpServer: (server: HttpMcpServerEntity) -> Unit,
     onDeleteHttpServer: (server: HttpMcpServerEntity) -> Unit,
+    onSetCaptureType: (DefaultCaptureType) -> Unit,
+    onSelectNoteProvider: (IntegrationProvider) -> Unit,
+    onSelectReminderProvider: (IntegrationProvider) -> Unit,
+    onNoteConnectStarted: (providerId: String) -> Unit,
+    onReminderConnectStarted: (providerId: String) -> Unit,
+    onReviewInstall: suspend (StorePlugin) -> InstallReview?,
+    onInstallStorePlugin: suspend (StorePlugin, granted: Map<String, Boolean?>) -> Boolean,
     onAddIntegration: () -> Unit,
     onConfigurePlugin: (uuid: Uuid, title: String) -> Unit,
     onOpenBeeperContacts: () -> Unit,
@@ -306,31 +313,17 @@ fun IndexActionsSection(
     onProvidersChanged: () -> Unit,
     showHeader: Boolean = true,
 ) {
-    val gestureRouting = koinInject<GestureRoutingPreferences>()
-    val routes by gestureRouting.routes.collectAsState()
-    if (nothingRoutesToIndexAgent(routes)) {
+    if (!agentReachable) {
         NoIndexAgentCard()
         return
     }
 
-    val preferences = koinInject<Preferences>()
-    val providers = koinInject<IntegrationProviderRepository>()
-    val pluginStore = koinInject<PluginStore>()
     val colors = IndexTheme.colors
     val scope = rememberCoroutineScope()
 
-    val captureType by preferences.defaultCaptureType.collectAsState()
-    val noteProvider by providers.selectedNoteProvider.collectAsState()
-    val reminderProvider by providers.selectedReminderProvider.collectAsState()
-    val approvedContacts by preferences.approvedBeeperContacts.collectAsState()
     var sheet by remember { mutableStateOf<ActionsSheet?>(null) }
     var dialog by remember { mutableStateOf<ActionsDialog?>(null) }
     var editingServer by remember { mutableStateOf<HttpMcpServerEntity?>(null) }
-    // Connecting from a destination sheet is a pick as well as a connect, but the connect dialogs
-    // only report dismissal, so the choice is applied once the provider shows up as available.
-    // Held by id: a store plugin has no provider until it is installed.
-    var pendingNoteConnect by remember { mutableStateOf<String?>(null) }
-    var pendingReminderConnect by remember { mutableStateOf<String?>(null) }
     var storeReview by remember { mutableStateOf<Pair<StorePlugin, InstallReview>?>(null) }
     var installFailed by remember { mutableStateOf<StorePlugin?>(null) }
     val closeConnectDialog = {
@@ -338,25 +331,10 @@ fun IndexActionsSection(
         onProvidersChanged()
     }
 
-    LaunchedEffect(availableNoteProviders) {
-        availableNoteProviders.firstOrNull { it.id == pendingNoteConnect }?.let {
-            providers.selectNoteProvider(it)
-            pendingNoteConnect = null
-        }
-    }
-    LaunchedEffect(availableReminderProviders) {
-        availableReminderProviders.firstOrNull { it.id == pendingReminderConnect }?.let {
-            providers.selectReminderProvider(it)
-            pendingReminderConnect = null
-        }
-    }
-
     // Installing from the sheet behaves like connecting an installed plugin: the config page opens.
     fun installStorePlugin(plugin: StorePlugin, granted: Map<String, Boolean?>) {
         scope.launch {
-            val installed = pluginStore.install(plugin.pluginUuid, granted)
-            onProvidersChanged()
-            if (!installed) {
+            if (!onInstallStorePlugin(plugin, granted)) {
                 installFailed = plugin
             } else if (plugin.configurable) {
                 onConfigurePlugin(plugin.pluginUuid, plugin.title)
@@ -365,7 +343,7 @@ fun IndexActionsSection(
     }
     fun connectStorePlugin(plugin: StorePlugin) {
         scope.launch {
-            val review = pluginStore.reviewInstall(plugin.pluginUuid)
+            val review = onReviewInstall(plugin)
             if (review == null) installStorePlugin(plugin, emptyMap()) else storeReview = plugin to review
         }
     }
@@ -400,8 +378,8 @@ fun IndexActionsSection(
                 enabled = action.enabled,
                 disabledReason = action.disabledReason,
                 presentation = presentationFor(action),
-                badge = contactsBadge(approvedContacts.size)
-                    .takeIf { action.name == MessagingServlet.name && approvedContacts.isNotEmpty() },
+                badge = contactsBadge(approvedContactCount)
+                    .takeIf { action.name == MessagingServlet.name && approvedContactCount > 0 },
                 destinationLabel = when (action.name) {
                     NoteServlet.NAME -> noteProvider.notesTitle
                     ReminderServlet.NAME -> reminderProvider.remindersTitle
@@ -476,7 +454,7 @@ fun IndexActionsSection(
         ActionsSheet.CaptureType -> CaptureTypeSheet(
             current = captureType,
             onSelect = {
-                preferences.setDefaultCaptureType(it)
+                onSetCaptureType(it)
                 sheet = null
             },
             onDismiss = { sheet = null },
@@ -484,26 +462,19 @@ fun IndexActionsSection(
         ActionsSheet.NoteDestination -> DestinationSheet(
             icon = Icons.Default.EditNote,
             title = "Where notes save",
-            options = noteDestOptions(
-                providers.providers(IntegrationSupport.Note).visibleDestinations(pluginsEnabled),
-                availableNoteProviders,
-                configurablePlugins,
-            ),
+            options = noteDestOptions(noteDestinationProviders, availableNoteProviders, configurablePlugins),
             storePlugins = storeDestOptions(storePlugins, IntegrationSupport.Note),
             selected = noteProvider,
-            onSelect = {
-                pendingNoteConnect = null
-                providers.selectNoteProvider(it)
-            },
+            onSelect = onSelectNoteProvider,
             onConnect = { provider ->
-                pendingNoteConnect = provider.id
+                onNoteConnectStarted(provider.id)
                 when (provider) {
                     is PblPluginIntegrationProvider -> onConfigurePlugin(provider.pluginUuid, provider.title)
                     else -> noteConnectDialog(provider)?.let { dialog = it } ?: onAddIntegration()
                 }
             },
             onInstall = { plugin ->
-                pendingNoteConnect = PblPluginIntegrationProvider.idFor(plugin.pluginUuid)
+                onNoteConnectStarted(PblPluginIntegrationProvider.idFor(plugin.pluginUuid))
                 connectStorePlugin(plugin)
             },
             onConfigure = { provider ->
@@ -517,26 +488,19 @@ fun IndexActionsSection(
         ActionsSheet.ReminderDestination -> DestinationSheet(
             icon = Icons.Default.Checklist,
             title = "Where reminders save",
-            options = reminderDestOptions(
-                providers.providers(IntegrationSupport.Reminder).visibleDestinations(pluginsEnabled),
-                availableReminderProviders,
-                configurablePlugins,
-            ),
+            options = reminderDestOptions(reminderDestinationProviders, availableReminderProviders, configurablePlugins),
             storePlugins = storeDestOptions(storePlugins, IntegrationSupport.Reminder),
             selected = reminderProvider,
-            onSelect = {
-                pendingReminderConnect = null
-                providers.selectReminderProvider(it)
-            },
+            onSelect = onSelectReminderProvider,
             onConnect = { provider ->
-                pendingReminderConnect = provider.id
+                onReminderConnectStarted(provider.id)
                 when (provider) {
                     is PblPluginIntegrationProvider -> onConfigurePlugin(provider.pluginUuid, provider.title)
                     else -> reminderConnectDialog(provider)?.let { dialog = it } ?: onAddIntegration()
                 }
             },
             onInstall = { plugin ->
-                pendingReminderConnect = PblPluginIntegrationProvider.idFor(plugin.pluginUuid)
+                onReminderConnectStarted(PblPluginIntegrationProvider.idFor(plugin.pluginUuid))
                 connectStorePlugin(plugin)
             },
             onConfigure = { provider ->
@@ -548,7 +512,7 @@ fun IndexActionsSection(
     }
 
     storeReview?.let { (plugin, review) ->
-        pluginStore.ReviewInstallDialog(review) { granted ->
+        koinInject<PluginStore>().ReviewInstallDialog(review) { granted ->
             storeReview = null
             if (granted != null) installStorePlugin(plugin, granted)
         }

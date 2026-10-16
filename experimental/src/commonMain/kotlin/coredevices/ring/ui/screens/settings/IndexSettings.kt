@@ -111,7 +111,6 @@ fun IndexSettings(coreNav: CoreNav) {
     val snackbarHostState = remember { SnackbarHostState() }
     val webhookViewModel = koinViewModel<IndexWebhookSettingsViewModel>()
     val debugDetailsEnabled by viewModel.debugDetailsEnabled.collectAsState()
-    val showContactsDialog by viewModel.showContactsDialog.collectAsState()
     val showNoteShortcutDialog by viewModel.showNoteShortcutDialog.collectAsState()
     val autoDismissActionNotifications by viewModel.autoDismissActionNotifications.collectAsState()
     val pendingIntentScanEnabled by viewModel.pendingIntentScanEnabled.collectAsState()
@@ -159,11 +158,6 @@ fun IndexSettings(coreNav: CoreNav) {
         SignInDialog(onDismiss = { showSignInDialog = false })
     }
     IndexWebhookSheetHost()
-    if (showContactsDialog && platform.isAndroid) {
-        SettingsBeeperContactsDialog(
-            onDismissRequest = viewModel::closeContactsDialog
-        )
-    }
     if (showNoteShortcutDialog) {
         val shortcut = viewModel.noteShortcut.collectAsState()
         NoteShortcutDialog(
@@ -319,7 +313,7 @@ fun IndexSettings(coreNav: CoreNav) {
             item { RingButtonSection() }
 
             // --- Actions section ---
-            item { IndexAgentActionsSection(coreNav, viewModel) }
+            item { IndexAgentActionsSection(coreNav) }
             item {
                 SectionHeader(
                     modifier = Modifier.padding(top = 22.dp, bottom = 2.dp, start = 16.dp, end = 16.dp),

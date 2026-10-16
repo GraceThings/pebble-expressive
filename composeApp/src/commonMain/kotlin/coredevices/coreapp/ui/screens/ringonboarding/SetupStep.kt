@@ -70,7 +70,6 @@ import coredevices.ring.ui.screens.settings.NotionDialog
 import coredevices.ring.ui.viewmodel.BackupViewModel
 import coredevices.ring.ui.viewmodel.EncryptionViewModel
 import coredevices.ring.ui.viewmodel.RingButtonViewModel
-import coredevices.ring.ui.viewmodel.SettingsViewModel
 import coredevices.ui.SignInDialog
 import coredevices.util.CoreConfigHolder
 import coredevices.util.Permission
@@ -104,7 +103,6 @@ import theme.AppTheme
 @Composable
 internal fun SetupStep(
     coreNav: CoreNav,
-    settingsViewModel: SettingsViewModel,
     ringButtonViewModel: RingButtonViewModel,
     preferences: Preferences,
     snackbarDisplay: SnackbarDisplay,
@@ -311,7 +309,7 @@ internal fun SetupStep(
             title = "Index Agent",
             sub = "Pick which actions Index can take, and where notes and reminders are saved."
         ) {
-            IndexAgentActionsSection(coreNav, settingsViewModel, showHeader = false)
+            IndexAgentActionsSection(coreNav, showHeader = false)
         }
 
         // 4 — Secondary action

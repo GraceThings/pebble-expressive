@@ -59,7 +59,6 @@ import coredevices.pebble.ui.SnackbarDisplay
 import coredevices.pebble.ui.setHasSeenRingOnboarding
 import coredevices.ring.database.Preferences
 import coredevices.ring.ui.viewmodel.RingButtonViewModel
-import coredevices.ring.ui.viewmodel.SettingsViewModel
 import coredevices.util.Platform
 import coredevices.util.emailOrNull
 import coredevices.util.isAndroid
@@ -78,7 +77,6 @@ fun RingOnboardingScreen(
     val preferences: Preferences = koinInject()
     val platform: Platform = koinInject()
     val settings: Settings = koinInject()
-    val settingsViewModel = koinViewModel<SettingsViewModel>()
     val ringButtonViewModel = koinViewModel<RingButtonViewModel>()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -141,7 +139,6 @@ fun RingOnboardingScreen(
                         )
                         else -> SetupStep(
                             coreNav = coreNav,
-                            settingsViewModel = settingsViewModel,
                             ringButtonViewModel = ringButtonViewModel,
                             preferences = preferences,
                             snackbarDisplay = snackbarDisplay,

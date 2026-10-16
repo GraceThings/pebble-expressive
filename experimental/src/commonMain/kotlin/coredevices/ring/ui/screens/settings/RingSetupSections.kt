@@ -10,8 +10,8 @@ import coredevices.ring.external.indexwebhook.IndexWebhookConfig
 import coredevices.ring.external.indexwebhook.IndexWebhookSettingsViewModel
 import coredevices.ring.external.indexwebhook.IndexWebhookSheet
 import coredevices.ring.ui.navigation.RingRoutes
+import coredevices.ring.ui.viewmodel.IndexActionsViewModel
 import coredevices.ring.ui.viewmodel.RingButtonViewModel
-import coredevices.ring.ui.viewmodel.SettingsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -47,34 +47,61 @@ fun IndexWebhookSheetHost() {
 
 /** The Index Agent action list with its settings state, shared the same way as [RingButtonSection]. */
 @Composable
-fun IndexAgentActionsSection(coreNav: CoreNav, viewModel: SettingsViewModel, showHeader: Boolean = true) {
+fun IndexAgentActionsSection(
+    coreNav: CoreNav,
+    showHeader: Boolean = true,
+    viewModel: IndexActionsViewModel = koinViewModel(),
+) {
+    val agentReachable by viewModel.agentReachable.collectAsState()
     val actions by viewModel.indexActions.collectAsState()
     val httpMcpDisabledReason by viewModel.httpMcpDisabledReason.collectAsState()
     val plugins by viewModel.plugins.collectAsState()
     val httpMcpServers by viewModel.httpMcpServers.collectAsState()
+    val captureType by viewModel.captureType.collectAsState()
+    val noteProvider by viewModel.noteProvider.collectAsState()
+    val reminderProvider by viewModel.reminderProvider.collectAsState()
+    val approvedContactCount by viewModel.approvedContactCount.collectAsState()
+    val noteDestinationProviders by viewModel.noteDestinationProviders.collectAsState()
+    val reminderDestinationProviders by viewModel.reminderDestinationProviders.collectAsState()
     val availableNoteProviders by viewModel.availableNoteProviders.collectAsState()
     val availableReminderProviders by viewModel.availableReminderProviders.collectAsState()
     val configurablePlugins by viewModel.configurablePlugins.collectAsState()
-    val pluginsEnabled by viewModel.pluginsEnabled.collectAsState()
     val storePlugins by viewModel.storePlugins.collectAsState()
+    val showContactsDialog by viewModel.showContactsDialog.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.refreshAvailableProviders() }
+    if (showContactsDialog && viewModel.contactsDialogSupported) {
+        SettingsBeeperContactsDialog(onDismissRequest = viewModel::closeContactsDialog)
+    }
     IndexActionsSection(
         showHeader = showHeader,
+        agentReachable = agentReachable,
         actions = actions,
         plugins = plugins,
         httpMcpServers = httpMcpServers,
         httpMcpDisabledReason = httpMcpDisabledReason,
+        captureType = captureType,
+        noteProvider = noteProvider,
+        reminderProvider = reminderProvider,
+        approvedContactCount = approvedContactCount,
+        noteDestinationProviders = noteDestinationProviders,
+        reminderDestinationProviders = reminderDestinationProviders,
         availableNoteProviders = availableNoteProviders,
         availableReminderProviders = availableReminderProviders,
         configurablePlugins = configurablePlugins,
-        pluginsEnabled = pluginsEnabled,
         storePlugins = storePlugins,
         onSetActionEnabled = viewModel::setActionEnabled,
         onSetPluginGrantEnabled = viewModel::setPluginGrantEnabled,
         onSetHttpServerEnabled = viewModel::setHttpServerEnabled,
         onSaveHttpServer = viewModel::saveHttpServer,
         onDeleteHttpServer = viewModel::deleteHttpServer,
+        onSetCaptureType = viewModel::setCaptureType,
+        onSelectNoteProvider = viewModel::selectNoteProvider,
+        onSelectReminderProvider = viewModel::selectReminderProvider,
+        onNoteConnectStarted = viewModel::noteConnectStarted,
+        onReminderConnectStarted = viewModel::reminderConnectStarted,
+        onReviewInstall = viewModel::reviewInstall,
+        onInstallStorePlugin = viewModel::installStorePlugin,
         onAddIntegration = { coreNav.navigateTo(RingRoutes.AddIntegration) },
         onConfigurePlugin = { uuid, title ->
             coreNav.navigateTo(CommonRoutes.WatchappSettingsRoute(uuid = uuid.toString(), title = title))
