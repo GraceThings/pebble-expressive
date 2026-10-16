@@ -33,7 +33,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storefront
@@ -220,7 +220,7 @@ private fun presentationFor(action: IndexAction): ActionPresentation = when (act
         "Beeper Messaging",
         "“Tell Jake I’m running late” → message to an approved contact",
     )
-    else -> ActionPresentation(Icons.Default.Extension, action.title, "")
+    else -> ActionPresentation(Icons.Default.Power, action.title, "")
 }
 
 private fun presentationFor(server: HttpMcpServerEntity) = ActionPresentation(
@@ -708,7 +708,7 @@ private fun PluginRow(
     }
     Column(modifier = Modifier.fillMaxWidth()) {
         AgentRow(
-            icon = Icons.Default.Extension,
+            icon = Icons.Default.Power,
             title = plugin.title,
             summary = pluginSummary(plugin),
             interactive = interactive,
@@ -1092,7 +1092,7 @@ private fun DestOptionTitle(title: String, plugin: Boolean) {
         Spacer(Modifier.width(4.dp))
         if (plugin) {
             Icon(
-                Icons.Default.Extension,
+                Icons.Default.Power,
                 contentDescription = "Plugin",
                 modifier = Modifier.size(18.dp),
                 tint = IndexTheme.colors.onSurfaceVariant
