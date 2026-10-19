@@ -73,7 +73,7 @@ class WebSocketManager(
     }
 
     override fun close() {
-        instances.values.forEach { it.cancel() }
+        instances.values.toList().forEach { it.cancel() }
         instances.clear()
     }
 

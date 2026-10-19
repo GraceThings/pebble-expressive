@@ -10,6 +10,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -67,6 +68,22 @@ class WebSocketManagerTest {
         awaitSockets()
 
         assertEquals(listOf(ABNORMAL_CLOSE), evals)
+    }
+
+    // Unconfined, like the app's immediate dispatcher: a cancelled socket drops out of the map mid-loop.
+    @Test
+    fun tearingDownWithSeveralSocketsOpenClosesThemAll() = runTest(UnconfinedTestDispatcher()) {
+        val client = HttpClient(MockEngine { awaitCancellation() }) { install(WebSockets) }
+        val evals = mutableListOf<String>()
+        val manager = WebSocketManager(this, { evals.add(it) }, client, Uuid.random(), internet)
+
+        manager.dispatch("createInstance", listOf("wss://a.example.com/", ""))
+        manager.dispatch("createInstance", listOf("wss://b.example.com/", ""))
+        runCurrent()
+        manager.close()
+        awaitSockets()
+
+        assertEquals(2, evals.count { it.endsWith("._onClose(1006, '', false)") })
     }
 
     @Test
