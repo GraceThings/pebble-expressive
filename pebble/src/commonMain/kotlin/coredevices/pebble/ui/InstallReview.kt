@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Notifications
@@ -257,10 +259,41 @@ fun AppPermissionsSection(appUuid: Uuid) {
             }
         }
     }
+    val legacy by remember(appUuid) {
+        libPebble.getLockerApp(appUuid).map { it?.properties?.legacy == true }
+    }.collectAsState(false)
+    var expanded by remember(appUuid) { mutableStateOf(false) }
     if (statuses.isEmpty()) return
     val scope = rememberCoroutineScope()
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text("Permissions", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+        if (legacy) {
+            // Never hide a request still waiting for an answer.
+            val open = expanded || statuses.any { it.status == PermissionStatus.Waiting }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { expanded = !open },
+            ) {
+                Text(
+                    "Permissions (Legacy App)",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f).padding(bottom = 4.dp),
+                )
+                Icon(
+                    if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (open) "Collapse" else "Expand",
+                )
+            }
+            if (!open) return@Column
+            Text(
+                "Apps built before permissions existed can use these by default. To be asked first, turn on " +
+                    "\"Ask before older apps use permissions\" in Settings.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        } else {
+            Text("Permissions", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+        }
         statuses.forEach { row ->
             val lastUsedAtMs = row.lastUsedAtMs
             val used = if (lastUsedAtMs == null) "Not used yet" else "Used ${relativeTime(Instant.fromEpochMilliseconds(lastUsedAtMs))}"

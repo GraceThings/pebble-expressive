@@ -597,6 +597,7 @@ fun LockerEntry.wrap(config: WatchConfigFlow): LockerWrapper? {
             iosCompanion = iosCompanion,
             androidCompanion = androidCompanion,
             order = orderIndex,
+            legacy = isLegacy(manifestVersion),
             developerId = appstoreData?.developerId,
             storeId = appstoreData?.storeId,
             sourceLink = appstoreData?.sourceLink,
