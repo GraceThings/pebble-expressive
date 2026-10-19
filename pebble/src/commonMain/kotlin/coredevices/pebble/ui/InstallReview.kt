@@ -67,11 +67,11 @@ import kotlinx.coroutines.launch
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-/** [onAnswer] gets null if the install was cancelled, and a null decision for each permission left undecided. */
+/** [onAnswer] gets null if the install was cancelled. */
 @Composable
-fun InstallReviewDialog(review: InstallReview, onAnswer: (Map<String, Boolean?>?) -> Unit) {
+fun InstallReviewDialog(review: InstallReview, onAnswer: (Map<String, Boolean>?) -> Unit) {
     val defined = rememberPluginPermissions()
-    val granted = remember(review) { mutableStateMapOf<String, Boolean>() }
+    val decisions = remember(review) { mutableStateMapOf<String, Boolean>() }
     AlertDialog(
         onDismissRequest = { onAnswer(null) },
         title = { Text("Install ${review.appName}?") },
@@ -80,17 +80,27 @@ fun InstallReviewDialog(review: InstallReview, onAnswer: (Map<String, Boolean?>?
                 Text("It wants to:", style = MaterialTheme.typography.bodyMedium)
                 review.toReview.forEach { key ->
                     PermissionRow(key, defined) {
-                        val decision = granted[key]
+                        val decision = decisions[key]
                         if (decision == null) {
-                            UndecidedChoice { granted[key] = it }
+                            UndecidedChoice { decisions[key] = it }
                         } else {
-                            Switch(checked = decision, onCheckedChange = { granted[key] = it })
+                            Switch(checked = decision, onCheckedChange = { decisions[key] = it })
                         }
                     }
                 }
+                // At the end of the list, so it's only reached after scrolling past every permission.
+                TextButton(
+                    onClick = { review.toReview.forEach { decisions[it] = true } },
+                    modifier = Modifier.align(Alignment.End),
+                ) { Text("Allow all") }
             }
         },
-        confirmButton = { TextButton(onClick = { onAnswer(review.toReview.associateWith { granted[it] }) }) { Text("Install") } },
+        confirmButton = {
+            TextButton(
+                onClick = { onAnswer(review.toReview.associateWith { decisions.getValue(it) }) },
+                enabled = review.toReview.all { it in decisions },
+            ) { Text("Install") }
+        },
         dismissButton = { TextButton(onClick = { onAnswer(null) }) { Text("Cancel") } },
     )
 }
