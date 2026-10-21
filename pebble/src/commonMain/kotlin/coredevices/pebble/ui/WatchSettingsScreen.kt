@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.BugReport
@@ -65,6 +68,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -73,6 +77,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -89,11 +94,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
@@ -2286,20 +2293,25 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
 
                 if (isSearching) {
                     // When searching, show all matching settings grouped by section (like before)
-                    LazyColumn(state = listState) {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         groupedItemsToDisplay.forEach { (section, items) ->
                             stickyHeader {
                                 Box(
                                     modifier = Modifier.fillMaxWidth()
                                         .background(MaterialTheme.colorScheme.background)
+                                        .padding(vertical = 4.dp),
                                 ) {
                                     Text(
                                         section.title,
-                                        style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.padding(
-                                            horizontal = 16.dp,
-                                            vertical = 8.dp,
+                                            horizontal = 4.dp,
+                                            vertical = 4.dp,
                                         )
                                     )
                                 }
@@ -2308,10 +2320,17 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                                 items = items,
                                 key = { it.title },
                             ) { item ->
-                                item.Item()
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    tonalElevation = 1.dp,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    item.Item()
+                                }
                             }
                             item {
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(4.dp))
                             }
                         }
                     }
@@ -2322,16 +2341,17 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                         state.healthTrackingEnabled && !state.coreConfig.preferHealthTab
 
                     // When not searching, show category list
-                    LazyColumn(state = listState) {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         if (notificationsDisplaced) {
                             item(key = "displaced_notifications") {
-                                ListItem(
-                                    leadingContent = {
-                                        Icon(Icons.AutoMirrored.Default.ArrowForward, contentDescription = null)
-                                    },
-                                    headlineContent = { Text("Notifications") },
-                                    shadowElevation = ELEVATION,
-                                    modifier = Modifier.clickable {
+                                M3ESettingsCategoryItem(
+                                    title = "Notifications",
+                                    icon = Icons.AutoMirrored.Default.ArrowForward,
+                                    onClick = {
                                         navBarNav.navigateTo(PebbleNavBarRoutes.NotificationsRoute)
                                     },
                                 )
@@ -2339,13 +2359,10 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                         }
                         if (healthDisplaced) {
                             item(key = "displaced_health") {
-                                ListItem(
-                                    leadingContent = {
-                                        Icon(Icons.AutoMirrored.Default.ArrowForward, contentDescription = null)
-                                    },
-                                    headlineContent = { Text("Health") },
-                                    shadowElevation = ELEVATION,
-                                    modifier = Modifier.clickable {
+                                M3ESettingsCategoryItem(
+                                    title = "Health",
+                                    icon = Icons.AutoMirrored.Default.ArrowForward,
+                                    onClick = {
                                         navBarNav.navigateTo(PebbleNavBarRoutes.HealthRoute)
                                     },
                                 )
@@ -2358,23 +2375,11 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                             val sectionBadgeCount = filteredItems
                                 .filter { it.section == section && it.badge != null && it.show() }
                                 .sumOf { it.badge?.toIntOrNull() ?: 0 }
-                            ListItem(
-                                leadingContent = {
-                                    Icon(
-                                        section.icon,
-                                        contentDescription = null,
-                                    )
-                                },
-                                headlineContent = { Text(section.title) },
-                                trailingContent = if (sectionBadgeCount > 0) {
-                                    {
-                                        Badge {
-                                            Text("$sectionBadgeCount")
-                                        }
-                                    }
-                                } else null,
-                                shadowElevation = ELEVATION,
-                                modifier = Modifier.clickable {
+                            M3ESettingsCategoryItem(
+                                title = section.title,
+                                icon = section.icon,
+                                badgeCount = sectionBadgeCount,
+                                onClick = {
                                     val navigateDirectlyTo = section.navigatesDirectlyTo()
                                     if (navigateDirectlyTo != null) {
                                         navBarNav.navigateTo(navigateDirectlyTo)
@@ -2393,6 +2398,73 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun M3ESettingsCategoryItem(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    badgeCount: Int = 0,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 1.dp,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        ListItem(
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
+            leadingContent = {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
+            },
+            headlineContent = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            },
+            trailingContent = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (badgeCount > 0) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ) {
+                            Text("$badgeCount")
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            },
+        )
     }
 }
 
@@ -2432,12 +2504,22 @@ fun WatchSettingsCategoryScreen(
             }
         }
 
-        LazyColumn {
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             items(
                 items = filteredItems,
                 key = { it.title },
             ) { item ->
-                item.Item()
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    item.Item()
+                }
             }
         }
     }
@@ -2466,6 +2548,9 @@ fun basicSettingsActionItem(
     isDebugSetting = isDebugSetting,
     item = {
         ListItem(
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
             headlineContent = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (badge != null) {
@@ -2527,6 +2612,9 @@ fun basicSettingsToggleItem(
     isDebugSetting = isDebugSetting,
     item = {
         ListItem(
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
             headlineContent = {
                 Text(title)
             },
@@ -2542,6 +2630,7 @@ fun basicSettingsToggleItem(
                 }
             },
             shadowElevation = ELEVATION,
+            modifier = Modifier.clickable { onCheckChanged(!checked) },
         )
     },
 )
@@ -2573,6 +2662,9 @@ fun basicSettingsNumberItem(
     isDebugSetting = isDebugSetting,
     item = {
         ListItem(
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
             headlineContent = {
                 Text(title)
             },
@@ -2653,6 +2745,9 @@ fun basicSettingsNumberFieldItem(
     isDebugSetting = isDebugSetting,
     item = {
         ListItem(
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
             headlineContent = {
                 Text(title)
             },
@@ -2790,6 +2885,9 @@ fun <T> basicSettingsDropdownItem(
     isDebugSetting = isDebugSetting,
     item = {
         ListItem(
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
             headlineContent = {
                 Text(title)
             },

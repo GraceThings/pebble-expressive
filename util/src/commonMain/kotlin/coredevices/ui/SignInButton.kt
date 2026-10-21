@@ -1,13 +1,18 @@
 package coredevices.ui
 
 import PlatformUiContext
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -18,7 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import co.touchlab.kermit.Logger
@@ -60,6 +67,7 @@ internal suspend fun forceSignInWithCredential(credential: AuthCredential) {
     Logger.i { "forceSignInWithCredential: provider=${credential.providerId} beforeUid=$beforeUid wasAnonymous=$wasAnonymous finalUid=${Firebase.auth.currentUser?.uid?.take(8)}" }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SignInButton(
     onError: (String) -> Unit = {},
@@ -74,7 +82,7 @@ private fun SignInButton(
     val settings: Settings = koinInject()
     val context = rememberUiContext()
     var pendingSwitchCredential by remember { mutableStateOf<AuthCredential?>(null) }
-    PebbleElevatedButton(
+    Button(
         onClick = {
             // Must use GlobalScope here: on iOS, presenting the native Apple/Google sign-in sheet
             // causes the Compose UIKitComposeSceneLayer to be disposed, which would cancel a
@@ -109,10 +117,30 @@ private fun SignInButton(
                 }
             }
         },
-        text = text,
-        primaryColor = primaryColor,
-        modifier = modifier,
-    )
+        shapes = ButtonDefaults.shapes(),
+        colors = if (primaryColor) {
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
+        } else {
+            ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 6.dp,
+        ),
+        modifier = modifier.height(48.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            textAlign = TextAlign.Center,
+        )
+    }
 
     pendingSwitchCredential?.let { credential ->
         AccountSwitchConfirmationDialog(
@@ -230,6 +258,7 @@ fun SignInButtons(
     onDismiss: () -> Unit,
     primaryColor: Boolean,
     skipAccountSwitchConfirmation: Boolean = false,
+    buttonWidth: Dp? = null,
 ) {
     val koin = currentKoinScope()
     var error by remember { mutableStateOf<String?>(null) }
@@ -237,10 +266,19 @@ fun SignInButtons(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+        val colModifier = if (buttonWidth != null) {
+            Modifier.width(buttonWidth)
+        } else {
+            Modifier.width(IntrinsicSize.Max)
+        }
+        Column(
+            modifier = colModifier,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             if (CommonBuildKonfig.GOOGLE_AUTH_ENABLED) {
                 SignInButton(
                     onError = { error = it },

@@ -37,19 +37,28 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Construction
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.SettingsRemote
 import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -632,7 +641,7 @@ fun LockerScreen(
                                             key = "collection_${source.id}_categories_$i",
                                         ) {
                                             Column {
-                                                Row(modifier = Modifier.padding(horizontal = 8.dp)) {
+                                                Row(modifier = Modifier.padding(horizontal = 12.dp)) {
                                                     CategoryItem(
                                                         source = source,
                                                         category = categories.first(),
@@ -644,7 +653,7 @@ fun LockerScreen(
                                                             category = it,
                                                             navBarNav = navBarNav,
                                                         )
-                                                    }
+                                                    } ?: Spacer(modifier = Modifier.weight(1f))
                                                 }
                                                 if (i == it.categories.lastIndex) {
                                                     Spacer(modifier = Modifier.height(8.dp))
@@ -718,33 +727,64 @@ data class StoreHomeDisplay(
     val categories: List<List<StoreCategory>>,
 )
 
+private fun StoreCategory.iconVector(): ImageVector = when (slug.lowercase()) {
+    "daily" -> Icons.Filled.WbSunny
+    "tools-and-utilities" -> Icons.Filled.Construction
+    "notifications" -> Icons.Filled.Notifications
+    "remotes" -> Icons.Filled.SettingsRemote
+    "health-and-fitness" -> Icons.Filled.FitnessCenter
+    "games" -> Icons.Filled.SportsEsports
+    "faces" -> Icons.Filled.Watch
+    else -> when (name.lowercase()) {
+        "daily" -> Icons.Filled.WbSunny
+        "tools & utilities", "tools and utilities", "tools" -> Icons.Filled.Construction
+        "notifications" -> Icons.Filled.Notifications
+        "remotes" -> Icons.Filled.SettingsRemote
+        "health & fitness", "health and fitness", "health" -> Icons.Filled.FitnessCenter
+        "games" -> Icons.Filled.SportsEsports
+        "faces", "watchfaces" -> Icons.Filled.Watch
+        else -> Icons.Filled.Category
+    }
+}
+
 @Composable
 fun RowScope.CategoryItem(
     source: AppstoreSource,
     category: StoreCategory,
     navBarNav: NavBarNav,
 ) {
-    val color = category.color.toColorKmp()
-    Box(
-        modifier = Modifier.padding(2.dp)
-            .weight(1f)
-            .clickable {
-                navBarNav.navigateTo(
-                    PebbleNavBarRoutes.AppStoreCollectionRoute(
-                        sourceId = source.id,
-                        path = "category/${category.slug}",
-                        title = category.name,
-                        appType = AppType.Watchapp.code,
-                    )
+    FilledTonalButton(
+        onClick = {
+            navBarNav.navigateTo(
+                PebbleNavBarRoutes.AppStoreCollectionRoute(
+                    sourceId = source.id,
+                    path = "category/${category.slug}",
+                    title = category.name,
+                    appType = AppType.Watchapp.code,
                 )
-            }.background(color)
-            .clip(RoundedCornerShape(6.dp)),
+            )
+        },
+        shapes = ButtonDefaults.shapes(),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .weight(1f),
     ) {
+        Icon(
+            imageVector = category.iconVector(),
+            contentDescription = null,
+            modifier = Modifier.size(ButtonDefaults.IconSize),
+        )
+        Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
         Text(
             category.name,
-            modifier = Modifier.padding(9.dp),
             style = MaterialTheme.typography.labelLarge,
-            color = Color.Black,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -962,9 +1002,9 @@ fun AppCarousel(
             }
         }
         val carouselState = rememberCarouselState { items.size }
-        HorizontalUncontainedCarousel(
+        HorizontalMultiBrowseCarousel(
             state = carouselState,
-            itemWidth = 104.dp,
+            preferredItemWidth = 140.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
@@ -976,7 +1016,6 @@ fun AppCarousel(
             NativeWatchfaceCard(
                 entry,
                 navBarNav,
-                width = 104.dp,
                 topBarParams = topBarParams,
                 highlightInLocker = highlightInLocker,
                 modifier = Modifier.maskClip(MaterialTheme.shapes.medium),
@@ -1105,9 +1144,9 @@ private fun BuiltInPluginCarousel(plugins: List<PluginMetadata>) {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
         val carouselState = rememberCarouselState { plugins.size }
-        HorizontalUncontainedCarousel(
+        HorizontalMultiBrowseCarousel(
             state = carouselState,
-            itemWidth = 104.dp,
+            preferredItemWidth = 140.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
@@ -1123,7 +1162,7 @@ private fun BuiltInPluginCarousel(plugins: List<PluginMetadata>) {
 
 @Composable
 private fun NativePluginCard(plugin: PluginMetadata, modifier: Modifier = Modifier) {
-    Card(modifier = modifier.padding(3.dp).width(104.dp)) {
+    Card(modifier = modifier.padding(3.dp).fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier.fillMaxWidth().height(NATIVE_SCREENSHOT_HEIGHT),
@@ -1148,7 +1187,7 @@ private fun NativePluginCard(plugin: PluginMetadata, modifier: Modifier = Modifi
 fun NativeWatchfaceCard(
     entry: CommonApp,
     navBarNav: NavBarNav,
-    width: Dp,
+    width: Dp? = null,
     topBarParams: TopBarParams,
     highlightInLocker: Boolean,
     modifier: Modifier = Modifier,
@@ -1156,7 +1195,7 @@ fun NativeWatchfaceCard(
     Card(
         modifier = modifier
             .padding(3.dp)
-            .width(width)
+            .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
             .clickable {
                 navBarNav.navigateTo(
                     PebbleNavBarRoutes.LockerAppRoute(

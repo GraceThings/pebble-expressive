@@ -3,6 +3,7 @@ package coredevices.coreapp.ui.screens
 import CoreNav
 import NoOpCoreNav
 import PlatformUiContext
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,10 +21,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,7 +58,6 @@ import coreapp.composeapp.generated.resources.Res
 import coreapp.composeapp.generated.resources.pebble_logo
 import coredevices.pebble.ui.PebbleRoutes
 import coredevices.pebble.ui.PreviewWrapper
-import coredevices.ui.PebbleElevatedButton
 import coredevices.ui.SecondaryProfileWarningDialog
 import coredevices.ui.SignInButtons
 import coredevices.util.CoreConfig
@@ -72,7 +76,11 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.dsl.module
+import theme.coreGrey
+import theme.coreOrange
 import theme.onboardingScheme
+
+private val ONBOARDING_BUTTON_WIDTH = 260.dp
 
 
 enum class OnboardingStage {
@@ -162,41 +170,40 @@ fun OnboardingScreen(
             when (viewModel.stage.value) {
                 OnboardingStage.Welcome -> {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(20.dp),
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Image(
                             painter = painterResource(Res.drawable.pebble_logo),
-                            contentDescription = "description",
+                            contentDescription = "Pebble",
                             colorFilter = ColorFilter.tint(Color.White),
-                            modifier = Modifier.height(50.dp),
+                            modifier = Modifier.height(56.dp),
                         )
-                        Spacer(modifier = Modifier.height(15.dp))
-                        PebbleElevatedButton(
+                        Spacer(modifier = Modifier.height(32.dp))
+                        M3EOnboardingButton(
                             text = "Get Started",
                             onClick = {
                                 viewModel.stage.value = OnboardingStage.DeviceSelection
                             },
-                            primaryColor = true,
                         )
                     }
                 }
 
                 OnboardingStage.DeviceSelection -> {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(20.dp),
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Text(
                             text = "I have a:",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
                         )
-                        Spacer(modifier = Modifier.height(30.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.width(ONBOARDING_BUTTON_WIDTH),
                             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                         ) {
                             DeviceChoiceCard(
@@ -206,18 +213,21 @@ fun OnboardingScreen(
                                     viewModel.deviceChoice.value = DeviceChoice.Watch
                                     viewModel.stage.value = OnboardingStage.Permissions
                                 },
+                                modifier = Modifier.weight(1f),
                             )
                             DeviceChoiceCard(
                                 label = "Index 01",
                                 icon = Icons.Default.RadioButtonUnchecked,
                                 onClick = { chooseIndexDevice(DeviceChoice.Index01) },
+                                modifier = Modifier.weight(1f),
                             )
                         }
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         DeviceChoiceCard(
                             label = "Both",
                             icon = Icons.Default.Devices,
                             onClick = { chooseIndexDevice(DeviceChoice.Both) },
+                            modifier = Modifier.width(ONBOARDING_BUTTON_WIDTH),
                         )
                     }
                 }
@@ -240,7 +250,7 @@ fun OnboardingScreen(
                                 }
                             }
                             Column(
-                                modifier = Modifier.fillMaxSize().padding(20.dp),
+                                modifier = Modifier.fillMaxSize().padding(24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = if (warnBeforeFullScreenRequest) {
                                     Arrangement.Center
@@ -250,18 +260,25 @@ fun OnboardingScreen(
                             ) {
                                 if (!warnBeforeFullScreenRequest) {
                                     // Space from top of screen
-                                    Spacer(modifier = Modifier.height(20.dp))
+                                    Spacer(modifier = Modifier.height(24.dp))
                                 }
                                 Text(
                                     text = permissionToRequest.name(),
-                                    fontSize = 25.sp,
+                                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White,
                                     textAlign = TextAlign.Center,
                                 )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Text(permissionToRequest.descriptionOnboarding(), textAlign = TextAlign.Center)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = permissionToRequest.descriptionOnboarding(),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
                                 if (warnBeforeFullScreenRequest) {
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    PebbleElevatedButton(
+                                    Spacer(modifier = Modifier.height(32.dp))
+                                    M3EOnboardingButton(
                                         text = "OK",
                                         onClick = {
                                             scope.launch {
@@ -271,7 +288,6 @@ fun OnboardingScreen(
                                                 )
                                             }
                                         },
-                                        primaryColor = true,
                                     )
                                 }
                             }
@@ -282,29 +298,36 @@ fun OnboardingScreen(
                 OnboardingStage.SignIn -> {
                     val coreConfig by viewModel.coreConfig.collectAsState()
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(20.dp),
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Text(
                             text = "Sign In",
-                            fontSize = 35.sp,
-                            modifier = Modifier.padding(bottom = 25.dp),
+                            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text("Sign in to backup your Pebble account to backup apps, settings, etc", textAlign = TextAlign.Center)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Sign in to backup your Pebble account to backup apps, settings, etc",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.9f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
                         SignInButtons(
                             onDismiss = { viewModel.stage.value = OnboardingStage.Done },
                             primaryColor = true,
-                            // No anonymous data to preserve at this point — proceed straight
-                            // to the existing account if Firebase reports a collision.
                             skipAccountSwitchConfirmation = true,
+                            buttonWidth = ONBOARDING_BUTTON_WIDTH,
                         )
                         if (!coreConfig.enableIndex) {
-                            PebbleElevatedButton(
+                            Spacer(modifier = Modifier.height(8.dp))
+                            M3EOnboardingButton(
                                 text = "Skip",
                                 onClick = { viewModel.stage.value = OnboardingStage.Done },
-                                primaryColor = true,
+                                isSecondary = true,
                             )
                         }
                     }
@@ -312,14 +335,19 @@ fun OnboardingScreen(
 
                 OnboardingStage.Done -> {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(20.dp),
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        PebbleElevatedButton(
+                        Text(
+                            text = "Ready to Go!",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
+                        M3EOnboardingButton(
                             text = "Connect a Pebble!",
                             onClick = ::exitOnboarding,
-                            primaryColor = true,
                         )
                     }
                 }
@@ -329,36 +357,97 @@ fun OnboardingScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun M3EOnboardingButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isSecondary: Boolean = false,
+) {
+    if (isSecondary) {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            shapes = ButtonDefaults.shapes(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color.White,
+            ),
+            border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.85f)),
+            modifier = modifier
+                .width(ONBOARDING_BUTTON_WIDTH)
+                .height(48.dp),
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                textAlign = TextAlign.Center,
+            )
+        }
+    } else {
+        Button(
+            onClick = onClick,
+            enabled = enabled,
+            shapes = ButtonDefaults.shapes(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = coreGrey,
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 3.dp,
+                pressedElevation = 6.dp,
+            ),
+            modifier = modifier
+                .width(ONBOARDING_BUTTON_WIDTH)
+                .height(48.dp),
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
 @Composable
 private fun DeviceChoiceCard(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = Color.White,
+            contentColor = coreGrey,
         ),
-        modifier = Modifier.width(140.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 3.dp,
+            pressedElevation = 6.dp,
+        ),
+        modifier = modifier,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                modifier = Modifier.size(72.dp),
+                tint = coreOrange,
+                modifier = Modifier.size(52.dp),
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = label,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = coreGrey,
+                textAlign = TextAlign.Center,
             )
         }
     }
