@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -297,7 +297,7 @@ fun ModelManagementScreen(
                 when (val state = availableSTTModels.value) {
                     ModelManagementScreenViewModel.AvailableModelsState.Loading -> {
                         item(contentType = "loading") {
-                            CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                            CircularWavyProgressIndicator(modifier = Modifier.padding(16.dp))
                         }
                     }
 
@@ -401,20 +401,20 @@ private fun ModelListItem(
                     is DownloadState.Downloading -> {
                         Box(contentAlignment = Alignment.Center) {
                             if (downloadState.progress != null) {
-                                CircularProgressIndicator(
+                                CircularWavyProgressIndicator(
                                     modifier = Modifier
                                         .padding(8.dp)
                                         .size(26.dp),
-                                    strokeWidth = 2.dp,
+
                                     progress = { downloadState.progress },
                                     trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                                 )
                             } else {
-                                CircularProgressIndicator(
+                                CircularWavyProgressIndicator(
                                     modifier = Modifier
                                         .padding(8.dp)
                                         .size(26.dp),
-                                    strokeWidth = 2.dp
+
                                 )
                             }
                             IconButton(

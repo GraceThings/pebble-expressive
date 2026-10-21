@@ -13,7 +13,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -273,7 +273,7 @@ fun BackupDialog(
                 },
                 trailingContent = {
                     if (backupLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                     }
                 }
             )
@@ -304,7 +304,7 @@ fun BackupDialog(
                 },
                 trailingContent = {
                     if (backupDownloading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                     }
                 }
             )
@@ -326,7 +326,7 @@ fun BackupDialog(
                     },
                     trailingContent = {
                         if (importing) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                         }
                     }
                 )
@@ -390,7 +390,7 @@ fun BackupDialog(
                 },
                 trailingContent = {
                     if (encryptionKeyLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                     }
                 }
             )
@@ -456,7 +456,7 @@ fun BackupDialog(
                     },
                     trailingContent = {
                         if (enablingEncryption) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                         }
                     }
                 )

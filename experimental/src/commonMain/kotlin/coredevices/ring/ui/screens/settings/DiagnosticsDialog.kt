@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Troubleshoot
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -108,7 +108,7 @@ fun DiagnosticsDialog(
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(16.dp))
-                CircularProgressIndicator()
+                CircularWavyProgressIndicator()
             }
             is DiagnosticsState.Error -> Text(
                 "An error occurred: ${state.message}\nPlease try again ensuring you've clicked the button to wake up the device"

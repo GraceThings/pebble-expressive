@@ -22,7 +22,7 @@ import androidx.compose.material.icons.outlined.SpeakerNotesOff
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -179,12 +179,12 @@ internal fun RingDemo(nav: CoreNav) {
                         Spacer(Modifier.height(8.dp))
                         val progress = (downloadStatus as? ModelDownloadStatus.Downloading)?.progress
                         if (progress != null) {
-                            LinearProgressIndicator(
+                            LinearWavyProgressIndicator(
                                 progress = { progress },
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         } else {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
@@ -223,12 +223,12 @@ internal fun RingDemo(nav: CoreNav) {
                         ?.takeIf { it.transferId == transfer.id }
                         ?.progress
                     if (progress != null) {
-                        LinearProgressIndicator(
+                        LinearWavyProgressIndicator(
                             progress = { progress },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                     NotWorkingText()
                 }

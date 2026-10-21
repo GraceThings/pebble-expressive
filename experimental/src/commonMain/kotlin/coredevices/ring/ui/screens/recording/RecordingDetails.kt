@@ -51,7 +51,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -214,7 +214,7 @@ fun RecordingDetails(id: Long, coreNav: CoreNav) {
         ) {
             when (val state = itemState) {
                 is RecordingDetailsViewModel.ItemState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularWavyProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is RecordingDetailsViewModel.ItemState.Error -> {
                     Text("Error loading recording", color = indexColors.onSurfaceVariant, modifier = Modifier.align(Alignment.Center))

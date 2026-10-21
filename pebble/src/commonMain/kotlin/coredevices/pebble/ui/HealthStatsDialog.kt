@@ -13,7 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -86,9 +86,9 @@ fun HealthStatsDialog(libPebble: LibPebble, onDismissRequest: () -> Unit) {
             ) {
                 Text("Health Debug Stats")
                 if (isRefreshing) {
-                    CircularProgressIndicator(
+                    CircularWavyProgressIndicator(
                         modifier = Modifier.height(20.dp).width(20.dp),
-                        strokeWidth = 2.dp,
+
                     )
                 } else {
                     IconButton(onClick = { syncAndRefresh() }) {

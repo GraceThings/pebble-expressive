@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +50,7 @@ fun RecordingChatBubble(
                     enabled = enabled
                 ) {
                     when {
-                        buffering -> CircularProgressIndicator()
+                        buffering -> CircularWavyProgressIndicator()
                         playing -> Icon(Icons.Outlined.Pause, contentDescription = stringResource(Res.string.pause))
                         else -> Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(Res.string.play))
                     }

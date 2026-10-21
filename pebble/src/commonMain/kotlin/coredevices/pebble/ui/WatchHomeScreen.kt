@@ -42,9 +42,9 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.ShortNavigationBarItemDefaults
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
@@ -593,11 +593,11 @@ fun WatchHomeScreen(
                 }
             },
             bottomBar = {
-                NavigationBar(
+                ShortNavigationBar(
                     modifier = Modifier.height(navBarHeight),
                 ) {
                     WatchHomeNavTab.navBarEntries(indexEnabled.value, healthEnabled, preferHealthTab.value).forEach { route ->
-                        NavigationBarItem(
+                        ShortNavigationBarItem(
                             selected = viewModel.selectedTab.value == route,
                             onClick = {
                                 if (viewModel.selectedTab.value == route) {
@@ -639,8 +639,10 @@ fun WatchHomeScreen(
                                     maxLines = 1,
                                 )
                             },
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = Color.Transparent
+                            colors = ShortNavigationBarItemDefaults.colors(
+                                selectedIndicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
                             ),
                         )
                     }

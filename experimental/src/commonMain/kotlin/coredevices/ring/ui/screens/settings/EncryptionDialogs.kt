@@ -13,7 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -152,7 +152,7 @@ fun EncryptionSetupDialog(viewModel: EncryptionViewModel = koinViewModel()) {
                 EncryptionSetupState.Generating -> Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(12.dp))
                     Text("Generating your key and saving it to your password manager…")
                 }
@@ -183,7 +183,7 @@ fun EncryptionSetupDialog(viewModel: EncryptionViewModel = koinViewModel()) {
                 EncryptionSetupState.Restoring -> Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(12.dp))
                     Text("Looking for your key in your password manager…")
                 }

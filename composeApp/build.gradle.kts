@@ -165,6 +165,7 @@ kotlin {
                 optIn("kotlinx.serialization.ExperimentalSerializationApi")
                 optIn("kotlinx.cinterop.ExperimentalForeignApi")
                 optIn("androidx.compose.material3.ExperimentalMaterial3Api")
+                optIn("androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")
                 optIn("kotlinx.cinterop.BetaInteropApi")
                 optIn("kotlin.time.ExperimentalTime")
             }

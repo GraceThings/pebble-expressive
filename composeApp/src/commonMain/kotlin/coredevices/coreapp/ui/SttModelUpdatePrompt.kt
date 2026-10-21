@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -136,7 +136,7 @@ fun SttModelUpdatePrompt() {
             downloading -> {
                 Text("Downloading the updated model. This may take a few minutes.")
                 Spacer(Modifier.height(24.dp))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             failed -> Text("The download didn't finish. Check your connection and try again.")
             else -> Text("We've improved on-device voice recognition. Update the model to keep transcribing offline.")

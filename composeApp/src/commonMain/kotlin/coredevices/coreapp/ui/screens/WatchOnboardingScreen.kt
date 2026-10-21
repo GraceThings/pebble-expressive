@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -226,7 +226,7 @@ fun WatchOnboardingScreen(
                         )
                     } else {
                         if (loadingHomes) {
-                            CircularProgressIndicator(
+                            CircularWavyProgressIndicator(
                                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(5.dp),
                             )
                             return@Scaffold

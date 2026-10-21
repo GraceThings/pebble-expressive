@@ -17,7 +17,7 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Smartphone
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -464,9 +464,9 @@ private fun SpeechModelSheet(
                         )
                     }
                     when {
-                        downloading -> CircularProgressIndicator(
+                        downloading -> CircularWavyProgressIndicator(
                             modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
+
                             color = colors.primary,
                         )
                         !downloaded -> Icon(

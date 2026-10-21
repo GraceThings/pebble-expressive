@@ -48,7 +48,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -359,10 +359,10 @@ fun BugReportScreen(
                         ) {
                             when {
                                 sending -> {
-                                    CircularProgressIndicator(
+                                    CircularWavyProgressIndicator(
                                         modifier = Modifier.size(16.dp),
                                         color = MaterialTheme.colorScheme.onPrimary,
-                                        strokeWidth = 2.dp
+
                                     )
                                 }
 
@@ -504,7 +504,7 @@ fun BugReportScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
                             Text("Capturing screenshot...", fontSize = 14.sp)
                         }
                     } else {

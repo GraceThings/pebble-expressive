@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -299,7 +299,7 @@ fun AppstoreSourceItem(
                 }
             }
         } else {
-            CircularProgressIndicator(
+            CircularWavyProgressIndicator(
                 modifier = Modifier
                     .padding(16.dp)
                     .align(Alignment.CenterHorizontally)

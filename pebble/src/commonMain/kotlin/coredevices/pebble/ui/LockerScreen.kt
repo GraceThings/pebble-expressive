@@ -43,12 +43,14 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -779,7 +781,7 @@ fun SearchResultsList(
             // Composing the grid before the store results land would measure it with only the
             // locker entries, clamping any restored scroll position to the top.
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularWavyProgressIndicator()
             }
         } else {
             LazyVerticalGrid(
@@ -822,7 +824,7 @@ fun SearchResultsList(
                 if (storeResults.loadState.append is LoadState.Loading) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                            CircularWavyProgressIndicator()
                         }
                     }
                 } else if (storeResults.itemCount == 0 && hasUnfilteredStoreResults) {
@@ -881,7 +883,7 @@ fun SearchResultsList(
             if (isLoadingFirstPage) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularWavyProgressIndicator()
                     }
                 }
             } else {
@@ -911,7 +913,7 @@ fun SearchResultsList(
                 if (storeResults!!.loadState.append is LoadState.Loading) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                            CircularWavyProgressIndicator()
                         }
                     }
                 } else if (storeResults.itemCount == 0 && hasUnfilteredStoreResults) {
@@ -959,23 +961,26 @@ fun AppCarousel(
                 Icon(Icons.AutoMirrored.Default.ArrowForward, contentDescription = "See all", modifier = Modifier)
             }
         }
-        LazyRow(
+        val carouselState = rememberCarouselState { items.size }
+        HorizontalUncontainedCarousel(
+            state = carouselState,
+            itemWidth = 104.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
                 .padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            contentPadding = PaddingValues(horizontal = 5.dp),
-        ) {
-            items(items, key = { it.uuid } ) { entry ->
-                NativeWatchfaceCard(
-                    entry,
-                    navBarNav,
-                    width = 100.dp,
-                    topBarParams = topBarParams,
-                    highlightInLocker = highlightInLocker,
-                )
-            }
+            itemSpacing = 6.dp,
+            contentPadding = PaddingValues(horizontal = 16.dp),
+        ) { index ->
+            val entry = items[index]
+            NativeWatchfaceCard(
+                entry,
+                navBarNav,
+                width = 104.dp,
+                topBarParams = topBarParams,
+                highlightInLocker = highlightInLocker,
+                modifier = Modifier.maskClip(MaterialTheme.shapes.medium),
+            )
         }
     }
 }
@@ -1092,27 +1097,33 @@ private fun PluginMetadata.builtInIcon(): ImageVector = when (name) {
 
 @Composable
 private fun BuiltInPluginCarousel(plugins: List<PluginMetadata>) {
+    if (plugins.isEmpty()) return
     Column {
         Text(
             "Built-in Plugins",
             fontSize = 24.sp,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
-        LazyRow(
-            modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            contentPadding = PaddingValues(horizontal = 5.dp),
-        ) {
-            items(plugins, key = { it.pluginUuid.toString() }) { plugin ->
-                NativePluginCard(plugin)
-            }
+        val carouselState = rememberCarouselState { plugins.size }
+        HorizontalUncontainedCarousel(
+            state = carouselState,
+            itemWidth = 104.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(vertical = 6.dp),
+            itemSpacing = 6.dp,
+            contentPadding = PaddingValues(horizontal = 16.dp),
+        ) { index ->
+            val plugin = plugins[index]
+            NativePluginCard(plugin, modifier = Modifier.maskClip(MaterialTheme.shapes.medium))
         }
     }
 }
 
 @Composable
-private fun NativePluginCard(plugin: PluginMetadata) {
-    Card(modifier = Modifier.padding(3.dp).width(100.dp)) {
+private fun NativePluginCard(plugin: PluginMetadata, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.padding(3.dp).width(104.dp)) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier.fillMaxWidth().height(NATIVE_SCREENSHOT_HEIGHT),
@@ -1140,9 +1151,11 @@ fun NativeWatchfaceCard(
     width: Dp,
     topBarParams: TopBarParams,
     highlightInLocker: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = Modifier.padding(3.dp)
+        modifier = modifier
+            .padding(3.dp)
             .width(width)
             .clickable {
                 navBarNav.navigateTo(

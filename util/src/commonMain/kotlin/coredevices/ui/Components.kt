@@ -7,7 +7,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
@@ -102,7 +103,7 @@ fun CoreLinearProgressIndicator(
     color: Color = MaterialTheme.colorScheme.primary,
     trackColor: Color = MaterialTheme.colorScheme.tertiaryContainer,
 ) {
-    LinearProgressIndicator(
+    LinearWavyProgressIndicator(
         progress = progress,
         modifier = modifier,
         color = color,
@@ -116,7 +117,20 @@ fun CoreLinearProgressIndicator(
     color: Color = MaterialTheme.colorScheme.primary,
     trackColor: Color = MaterialTheme.colorScheme.tertiaryContainer,
 ) {
-    LinearProgressIndicator(
+    LinearWavyProgressIndicator(
+        modifier = modifier,
+        color = color,
+        trackColor = trackColor,
+    )
+}
+
+@Composable
+fun CoreCircularProgressIndicator(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    trackColor: Color = MaterialTheme.colorScheme.tertiaryContainer,
+) {
+    CircularWavyProgressIndicator(
         modifier = modifier,
         color = color,
         trackColor = trackColor,

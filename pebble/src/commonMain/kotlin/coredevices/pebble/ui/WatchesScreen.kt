@@ -74,7 +74,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -84,7 +84,7 @@ import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -317,21 +317,41 @@ fun WatchesScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
     Scaffold(
         floatingActionButton = {
             if (!bluetoothEnabled.enabled()) {
-                FloatingActionButton(
-                    onClick = { topBarParams.showSnackbar("Enable Bluetooth to connect a Pebble") }
-                ) {
-                    Icon(Icons.Filled.BluetoothDisabled, "Bluetooth is disabled")
-                }
+                FloatingActionButtonMenu(
+                    expanded = false,
+                    button = {
+                        ToggleFloatingActionButton(
+                            checked = false,
+                            onCheckedChange = { topBarParams.showSnackbar("Enable Bluetooth to connect a Pebble") },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.BluetoothDisabled,
+                                contentDescription = "Bluetooth is disabled",
+                                tint = Color.White,
+                            )
+                        }
+                    },
+                ) {}
             } else if (scanningStatus != ScanningStatus.NotScanning) {
-                FloatingActionButton(
-                    onClick = {
-                        libPebble.stopBleScan()
-                        libPebble.stopClassicScan()
-                        libIndex.stopScan()
-                    }
-                ) {
-                    Icon(Icons.Filled.Stop, "Stop Scanning")
-                }
+                FloatingActionButtonMenu(
+                    expanded = false,
+                    button = {
+                        ToggleFloatingActionButton(
+                            checked = true,
+                            onCheckedChange = {
+                                libPebble.stopBleScan()
+                                libPebble.stopClassicScan()
+                                libIndex.stopScan()
+                            },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Stop,
+                                contentDescription = "Stop Scanning",
+                                tint = Color.White,
+                            )
+                        }
+                    },
+                ) {}
             } else {
                 FloatingActionButtonMenu(
 //                    modifier = Modifier.padding(16.dp),
@@ -532,7 +552,7 @@ fun WatchesScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                             modifier = Modifier.align(Alignment.CenterHorizontally).padding(horizontal = 16.dp)
                         )
                     }
-                    CircularProgressIndicator(
+                    CircularWavyProgressIndicator(
                         modifier = Modifier.align(Alignment.CenterHorizontally).padding(5.dp)
                     )
                     if (scanningStatus != ScanningStatus.ScanningRing) {
@@ -851,9 +871,9 @@ fun RingItem(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.padding(top = 5.dp)
                                 ) {
-                                    CircularProgressIndicator(
+                                    CircularWavyProgressIndicator(
                                         modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp,
+
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text("Pairing...")
@@ -944,7 +964,7 @@ fun RingItem(
                     }
 
                     is InterviewedIndexDevice if ring.updating -> {
-                        LinearProgressIndicator(
+                        LinearWavyProgressIndicator(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 6.dp)
@@ -1988,7 +2008,7 @@ fun ScreenshotDialog(watch: ConnectedPebble.Screenshot, onDismissRequest: () -> 
             ) {
                 val screenshot = screenshot
                 if (screenshot == null) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    CircularWavyProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                 } else {
                     IconButton(onClick = { scope.launch { takeScreenshot() } }) {
                         Icon(Icons.Default.Refresh, contentDescription = null)

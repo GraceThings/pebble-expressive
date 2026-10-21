@@ -83,6 +83,7 @@ kotlin {
             languageSettings {
                 optIn("kotlinx.cinterop.ExperimentalForeignApi")
                 optIn("androidx.compose.material3.ExperimentalMaterial3Api")
+                optIn("androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")
                 optIn("kotlin.time.ExperimentalTime")
                 optIn("kotlin.uuid.ExperimentalUuidApi")
             }
