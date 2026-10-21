@@ -11,7 +11,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AppShortcut
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -108,22 +114,105 @@ fun IconImage(icon: TimelineIcon, modifier: Modifier) {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun IconPickerSheet(
+    onIconSelected: (TimelineIcon?) -> Unit,
+    onDismissWithoutResult: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = { onDismissWithoutResult() },
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Choose Icon",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                TextButton(onClick = { onIconSelected(null) }) {
+                    Text("None")
+                }
+            }
+
+            var searchQuery by remember { mutableStateOf("") }
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search Icons") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                singleLine = true,
+            )
+
+            val filteredIcons = remember(searchQuery) {
+                TimelineIcon.entries.filter { it.key().contains(searchQuery, ignoreCase = true) }
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
+            ) {
+                items(filteredIcons, key = { it.code }) { icon ->
+                    ListItem(
+                        headlineContent = {
+                            Text(icon.key(), fontSize = 14.sp)
+                        },
+                        leadingContent = {
+                            IconImage(icon, modifier = Modifier.size(33.dp))
+                        },
+                        modifier = Modifier.clickable { onIconSelected(icon) },
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun SelectIconOrNone(
     currentIcon: TimelineIcon?,
     onChangeIcon: (TimelineIcon?) -> Unit,
+    useSheet: Boolean = false,
 ) {
     var showIconChooser by remember { mutableStateOf(false) }
     if (showIconChooser) {
-        IconPickerDialog(
-            onIconSelected = { icon ->
-                onChangeIcon(icon)
-                showIconChooser = false
-            },
-            onDismissWithoutResult = {
-                showIconChooser = false
-            },
-        )
+        if (useSheet) {
+            IconPickerSheet(
+                onIconSelected = { icon ->
+                    onChangeIcon(icon)
+                    showIconChooser = false
+                },
+                onDismissWithoutResult = {
+                    showIconChooser = false
+                },
+            )
+        } else {
+            IconPickerDialog(
+                onIconSelected = { icon ->
+                    onChangeIcon(icon)
+                    showIconChooser = false
+                },
+                onDismissWithoutResult = {
+                    showIconChooser = false
+                },
+            )
+        }
     }
     ListItem(
         headlineContent = {

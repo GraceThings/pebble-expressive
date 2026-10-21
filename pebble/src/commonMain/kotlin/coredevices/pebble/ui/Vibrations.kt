@@ -15,7 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.AlertDialog
@@ -380,25 +387,184 @@ fun CustomVibeTapperDialog(onDismiss: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VibePatternPickerSheet(
+    onResult: (VibePattern?) -> Unit,
+    onDismissWithoutResult: () -> Unit,
+    selectedPattern: String?,
+) {
+    val scope = rememberCoroutineScope()
+    val libPebble = rememberLibPebble()
+    val vibePatterns by libPebble.vibePatterns().collectAsState(emptyList())
+    var showCustomVibeDialog by remember { mutableStateOf(false) }
+    var patternToDelete by remember { mutableStateOf<VibePattern?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    if (showCustomVibeDialog) {
+        CustomVibeTapperDialog {
+            showCustomVibeDialog = false
+        }
+    }
+    patternToDelete?.let { pattern ->
+        AlertDialog(
+            onDismissRequest = { patternToDelete = null },
+            title = { Text("Delete Pattern") },
+            text = { Text("Are you sure you want to delete the vibration pattern \"${pattern.name}\"?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    libPebble.deleteCustomPattern(pattern.name)
+                    patternToDelete = null
+                }) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { patternToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = { onDismissWithoutResult() },
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Choose Vibration Pattern",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                TextButton(onClick = { onResult(null) }) {
+                    Text("None")
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                PebbleElevatedButton(
+                    text = "Add Custom Pattern",
+                    onClick = { showCustomVibeDialog = true },
+                    primaryColor = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+            ) {
+                items(vibePatterns, key = { it.name }) { pattern ->
+                    val isSelected = selectedPattern == pattern.name
+                    ListItem(
+                        leadingContent = {
+                            IconButton(
+                                onClick = {
+                                    scope.testPattern(pattern, libPebble)
+                                },
+                            ) {
+                                Icon(
+                                    Icons.Default.PlayCircle,
+                                    contentDescription = "Test",
+                                )
+                            }
+                        },
+                        headlineContent = {
+                            Text(
+                                pattern.name,
+                                color = if (isSelected) coreOrange else MaterialTheme.colorScheme.onSurface,
+                            )
+                        },
+                        trailingContent = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = coreOrange,
+                                        modifier = Modifier.padding(end = 4.dp),
+                                    )
+                                }
+                                if (!pattern.bundled) {
+                                    IconButton(
+                                        onClick = {
+                                            patternToDelete = pattern
+                                        },
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .clickable(onClick = { onResult(pattern) })
+                            .border(
+                                width = if (isSelected) 1.5.dp else 0.dp,
+                                color = if (isSelected) coreOrange else Color.Transparent,
+                                shape = MaterialTheme.shapes.small,
+                            ),
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun SelectVibePatternOrNone(
     currentPattern: String?,
     onChangePattern: (VibePattern?) -> Unit,
     subtext: String? = null,
     title: String = "Vibration Pattern",
+    useSheet: Boolean = false,
 ) {
     var showVibePatternChooser by remember { mutableStateOf(false) }
     if (showVibePatternChooser) {
-        VibePatternPickerDialog(
-            onResult = { pattern ->
-                onChangePattern(pattern)
-                showVibePatternChooser = false
-            },
-            onDismissWithoutResult = {
-                showVibePatternChooser = false
-            },
-            selectedPattern = currentPattern,
-        )
+        if (useSheet) {
+            VibePatternPickerSheet(
+                onResult = { pattern ->
+                    onChangePattern(pattern)
+                    showVibePatternChooser = false
+                },
+                onDismissWithoutResult = {
+                    showVibePatternChooser = false
+                },
+                selectedPattern = currentPattern,
+            )
+        } else {
+            VibePatternPickerDialog(
+                onResult = { pattern ->
+                    onChangePattern(pattern)
+                    showVibePatternChooser = false
+                },
+                onDismissWithoutResult = {
+                    showVibePatternChooser = false
+                },
+                selectedPattern = currentPattern,
+            )
+        }
     }
     ListItem(
         headlineContent = {

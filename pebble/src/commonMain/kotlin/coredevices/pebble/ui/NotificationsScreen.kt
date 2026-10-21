@@ -94,22 +94,21 @@ fun NotificationsScreenContent(topBarParams: TopBarParams, nav: NavBarNav) {
 
         Column {
             if (pebbleFeatures.supportsNotificationFiltering()) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
-                    ) {
-                        NotificationTab.entries.forEachIndexed { index, tab ->
-                            SegmentedButton(
-                                shape = SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = NotificationTab.entries.size,
-                                ),
-                                onClick = { viewModel.tab.value = tab },
-                                selected = viewModel.tab.value == tab,
-                                label = { Text(tab.title) },
-                                icon = {},
-                            )
-                        }
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 12.dp),
+                ) {
+                    NotificationTab.entries.forEachIndexed { index, tab ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = NotificationTab.entries.size,
+                            ),
+                            onClick = { viewModel.tab.value = tab },
+                            selected = viewModel.tab.value == tab,
+                            label = { Text(tab.title) },
+                            icon = {},
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }

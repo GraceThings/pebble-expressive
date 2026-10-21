@@ -4,6 +4,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.SpaceEvenly
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -348,34 +349,36 @@ fun NotificationAppsScreen(topBarParams: TopBarParams, nav: NavBarNav, gotoDefau
                 item(key = "toggle_all") {
                     ListItem(
                         headlineContent = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
                                 Text("All Apps", fontSize = 17.sp)
-                            }
-                        },
-                        trailingContent = {
-                            Row {
-                                PebbleElevatedButton(
-                                    text = "Mute All",
-                                    onClick = {
-                                        libPebble.updateNotificationAppMuteState(
-                                            packageName = null,
-                                            muteState = MuteState.Always,
-                                        )
-                                    },
-                                    primaryColor = true,
-                                    modifier = Modifier.padding(horizontal = 5.dp),
-                                )
-                                PebbleElevatedButton(
-                                    text = "Enable All",
-                                    onClick = {
-                                        libPebble.updateNotificationAppMuteState(
-                                            packageName = null,
-                                            muteState = MuteState.Never,
-                                        )
-                                    },
-                                    primaryColor = true,
-                                    modifier = Modifier.padding(horizontal = 5.dp),
-                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    PebbleElevatedButton(
+                                        text = "Mute All",
+                                        onClick = {
+                                            libPebble.updateNotificationAppMuteState(
+                                                packageName = null,
+                                                muteState = MuteState.Always,
+                                            )
+                                        },
+                                        primaryColor = true,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    PebbleElevatedButton(
+                                        text = "Enable All",
+                                        onClick = {
+                                            libPebble.updateNotificationAppMuteState(
+                                                packageName = null,
+                                                muteState = MuteState.Never,
+                                            )
+                                        },
+                                        primaryColor = true,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
                             }
                         },
                         shadowElevation = 2.dp,

@@ -33,6 +33,9 @@ import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -237,27 +240,129 @@ private fun ColumnScope.ColorList(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ColorPickerSheet(
+    onColorSelected: (TimelineColor?) -> Unit,
+    onDismissWithoutResult: () -> Unit,
+    selectedColorName: String?,
+    availableColors: List<TimelineColor>? = null,
+    defaultToListTab: Boolean = false,
+) {
+    val sortedColors = remember {
+        TimelineColor.entries.filter {
+            availableColors == null || availableColors.contains(it)
+        }.map { it.toHsvColor() }
+            .sortedWith(
+                compareBy(
+                    { it.hue },
+                    { it.saturation },
+                    { it.value },
+                )
+            )
+    }
+    val selectedHsvColor = remember(selectedColorName) {
+        sortedColors.find { it.timelineColor.name == selectedColorName }
+    }
+    val defaultTab = if (defaultToListTab) ColorTab.List else ColorTab.Grid
+    val selectedTab = remember { mutableStateOf(defaultTab) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = { onDismissWithoutResult() },
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Choose Color",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                TextButton(onClick = { onColorSelected(null) }) {
+                    Text("None")
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    ColorTab.entries.forEachIndexed { index, tab ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = ColorTab.entries.size,
+                            ),
+                            onClick = { selectedTab.value = tab },
+                            selected = selectedTab.value == tab,
+                            icon = { },
+                            label = { Icon(tab.icon, contentDescription = tab.name) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+
+            when (selectedTab.value) {
+                ColorTab.List -> ColorList(selectedHsvColor, sortedColors, onColorSelected)
+                ColorTab.Grid -> ColorGrid(selectedHsvColor, sortedColors, onColorSelected)
+            }
+        }
+    }
+}
+
 @Composable
 fun SelectColorOrNone(
     currentColorName: String?,
     onChangeColor: (TimelineColor?) -> Unit,
     availableColors: List<TimelineColor>? = null,
     defaultToListTab: Boolean = false,
+    useSheet: Boolean = false,
 ) {
     var showColorChooser by remember { mutableStateOf(false) }
     if (showColorChooser) {
-        ColorPickerDialog(
-            onColorSelected = { pattern ->
-                onChangeColor(pattern)
-                showColorChooser = false
-            },
-            onDismissWithoutResult = {
-                showColorChooser = false
-            },
-            selectedColorName = currentColorName,
-            availableColors = availableColors,
-            defaultToListTab = defaultToListTab,
-        )
+        if (useSheet) {
+            ColorPickerSheet(
+                onColorSelected = { pattern ->
+                    onChangeColor(pattern)
+                    showColorChooser = false
+                },
+                onDismissWithoutResult = {
+                    showColorChooser = false
+                },
+                selectedColorName = currentColorName,
+                availableColors = availableColors,
+                defaultToListTab = defaultToListTab,
+            )
+        } else {
+            ColorPickerDialog(
+                onColorSelected = { pattern ->
+                    onChangeColor(pattern)
+                    showColorChooser = false
+                },
+                onDismissWithoutResult = {
+                    showColorChooser = false
+                },
+                selectedColorName = currentColorName,
+                availableColors = availableColors,
+                defaultToListTab = defaultToListTab,
+            )
+        }
     }
     ListItem(
         headlineContent = {

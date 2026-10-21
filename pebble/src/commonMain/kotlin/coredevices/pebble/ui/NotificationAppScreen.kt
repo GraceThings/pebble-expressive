@@ -146,6 +146,9 @@ fun NotificationAppScreen(
                     )
                 }
                 item {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                }
+                item {
                     SelectVibePatternOrNone(
                         currentPattern = appWrapper.app.vibePatternName,
                         onChangePattern = { pattern ->
@@ -156,7 +159,11 @@ fun NotificationAppScreen(
                                 iconCode = appWrapper.app.iconCode,
                             )
                         },
+                        useSheet = true,
                     )
+                }
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
                 item {
                     SelectColorOrNone(
@@ -169,7 +176,11 @@ fun NotificationAppScreen(
                                 iconCode = appWrapper.app.iconCode,
                             )
                         },
+                        useSheet = true,
                     )
+                }
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
                 item {
                     SelectIconOrNone(
@@ -182,82 +193,73 @@ fun NotificationAppScreen(
                                 iconCode = icon?.code,
                             )
                         },
+                        useSheet = true,
                     )
+                }
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
                 // Rules and channels sections - only available on Android
                 // (iOS doesn't have notification channels)
                 if (platform == Platform.Android) {
                     item {
-                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                            ElevatedCard(
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 6.dp
-                                ),
-                                modifier = Modifier.padding(10.dp),
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                ) {
-                                    Text("Channels", fontSize = 20.sp)
-                                    FilterChip(
-                                        onClick = {
-                                            viewModel.onlyNotified.value = !viewModel.onlyNotified.value
-                                        },
-                                        label = {
-                                            Text("Notified only")
-                                        },
-                                        selected = viewModel.onlyNotified.value,
-                                        leadingIcon = if (viewModel.onlyNotified.value) {
-                                            {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Done,
-                                                    contentDescription = "Done icon",
-                                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                                )
-                                            }
-                                        } else {
-                                            null
-                                        },
-                                    )
-                                }
-                                channelGroups.forEach { group ->
-                                    if (channelGroups.size > 1) {
-                                        Text(
-                                            text = group.name ?: "Default Group",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 4.dp).padding(bottom = 4.dp),
-                                        )
-                                    }
-                                    group.channels.forEach { channel ->
-                                        ChannelCard(
-                                            channelItem = channel,
-                                            app = app,
-                                            notificationApps = notificationApps,
-                                            channelCounts = channelCounts,
-                                            nav = nav,
-                                        )
-                                    }
-                                    if (group != channelGroups.last()) {
-                                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                                    }
-                                }
+                        ListItem(
+                            headlineContent = {
+                                Text("Channels", style = MaterialTheme.typography.titleMedium)
+                            },
+                            trailingContent = {
+                                FilterChip(
+                                    onClick = {
+                                        viewModel.onlyNotified.value = !viewModel.onlyNotified.value
+                                    },
+                                    label = {
+                                        Text("Notified only")
+                                    },
+                                    selected = viewModel.onlyNotified.value,
+                                    leadingIcon = if (viewModel.onlyNotified.value) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Filled.Done,
+                                                contentDescription = "Done icon",
+                                                modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                            )
+                                        }
+                                    } else null,
+                                )
                             }
+                        )
+                    }
+                    items(channelGroups) { group ->
+                        if (channelGroups.size > 1) {
+                            Text(
+                                text = group.name ?: "Default Group",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            )
+                        }
+                        group.channels.forEach { channel ->
+                            ChannelCard(
+                                channelItem = channel,
+                                app = app,
+                                notificationApps = notificationApps,
+                                channelCounts = channelCounts,
+                                nav = nav,
+                            )
+                        }
+                        if (group != channelGroups.last()) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                         }
                     }
                     item {
-                        ElevatedCard(
-                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                            modifier = Modifier.padding(10.dp),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            ) {
-                                Text("Allow duplicate notifications", fontSize = 17.sp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+                    item {
+                        ListItem(
+                            headlineContent = {
+                                Text("Allow duplicate notifications", style = MaterialTheme.typography.bodyLarge)
+                            },
+                            trailingContent = {
                                 Switch(
                                     checked = appWrapper.app.allowDuplicates,
                                     onCheckedChange = { newValue ->
@@ -268,19 +270,20 @@ fun NotificationAppScreen(
                                     },
                                 )
                             }
-                        }
+                        )
+                    }
+                    item {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
                     if (pebbleFeatures.supportsNotificationImages()) item {
-                        ElevatedCard(
-                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                            modifier = Modifier.padding(10.dp),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            ) {
-                                Text("Send images", fontSize = 17.sp)
+                        ListItem(
+                            headlineContent = {
+                                Text("Send images", style = MaterialTheme.typography.bodyLarge)
+                            },
+                            supportingContent = if (!sendImagesEnabledGlobally) {
+                                { Text("Disabled globally in settings", style = MaterialTheme.typography.bodySmall) }
+                            } else null,
+                            trailingContent = {
                                 Switch(
                                     checked = appWrapper.app.sendImages,
                                     enabled = sendImagesEnabledGlobally,
@@ -292,7 +295,10 @@ fun NotificationAppScreen(
                                     },
                                 )
                             }
-                        }
+                        )
+                    }
+                    item {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
                 }
                 
@@ -358,72 +364,71 @@ private fun NotificationRulesSection(
     var editingRule by remember { mutableStateOf<NotificationRuleEntity?>(null) }
     var showDialog by remember { mutableStateOf(false) }
 
-    ElevatedCard(
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        modifier = Modifier.padding(10.dp).fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Notification filter rules", fontSize = 20.sp, modifier = Modifier.padding(bottom = 8.dp))
-            Text(
-                if (rules.isEmpty()) "No notification rules"
-                else "Matching notifications will be blocked:",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp).fillMaxWidth(),
-            )
-            rules.forEach { rule ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            MaterialTheme.shapes.medium,
-                        )
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(rule.pattern)
-                        Spacer(Modifier.height(2.dp))
-                        val matchTypeLabel = if (rule.matchType == MatchType.Regex) "Regex" else "Text"
-                        val fieldLabel = when (rule.matchField) {
-                            MatchField.Title -> "Title"
-                            MatchField.Body -> "Body"
-                            MatchField.Both -> "Title+Body"
-                        }
-                        val caseLabel = if (rule.caseSensitive) "case-sensitive" else "case-insensitive"
-                        Text(
-                            "$matchTypeLabel on $fieldLabel, $caseLabel",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    IconButton(onClick = {
-                        editingRule = rule
+    Column(modifier = Modifier.fillMaxWidth()) {
+        ListItem(
+            headlineContent = {
+                Text("Notification filter rules", style = MaterialTheme.typography.titleMedium)
+            },
+            supportingContent = {
+                Text(
+                    if (rules.isEmpty()) "No notification rules"
+                    else "Matching notifications will be blocked:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            trailingContent = {
+                PebbleElevatedButton(
+                    text = "Add rule",
+                    onClick = {
+                        editingRule = null
                         showDialog = true
-                    }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit rule")
-                    }
-                    IconButton(onClick = {
-                        notificationApps.deleteNotificationRule(rule)
-                    }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete rule")
+                    },
+                    icon = Icons.Filled.Add,
+                    contentDescription = "Add rule",
+                    primaryColor = true,
+                )
+            }
+        )
+        rules.forEach { rule ->
+            val matchTypeLabel = if (rule.matchType == MatchType.Regex) "Regex" else "Text"
+            val fieldLabel = when (rule.matchField) {
+                MatchField.Title -> "Title"
+                MatchField.Body -> "Body"
+                MatchField.Both -> "Title+Body"
+            }
+            val caseLabel = if (rule.caseSensitive) "case-sensitive" else "case-insensitive"
+            ListItem(
+                headlineContent = {
+                    Text(rule.pattern, style = MaterialTheme.typography.bodyMedium)
+                },
+                supportingContent = {
+                    Text(
+                        "$matchTypeLabel on $fieldLabel, $caseLabel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                trailingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = {
+                            editingRule = rule
+                            showDialog = true
+                        }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit rule")
+                        }
+                        IconButton(onClick = {
+                            notificationApps.deleteNotificationRule(rule)
+                        }) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete rule")
+                        }
                     }
                 }
-            }
-            Spacer(Modifier.height(8.dp))
-            PebbleElevatedButton(
-                text = "Add rule",
-                onClick = {
-                    editingRule = null
-                    showDialog = true
-                },
-                icon = Icons.Filled.Add,
-                contentDescription = "Add rule",
-                primaryColor = true,
-                modifier = Modifier.align(Alignment.End),
             )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        }
+        if (rules.isEmpty()) {
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
     }
 
