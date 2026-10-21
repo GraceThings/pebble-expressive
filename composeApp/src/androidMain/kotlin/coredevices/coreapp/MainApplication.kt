@@ -27,6 +27,8 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.crashlytics.crashlytics
 import com.mmk.kmpnotifier.notification.NotifierManager
 import com.mmk.kmpnotifier.notification.configuration.NotificationPlatformConfiguration
@@ -67,8 +69,22 @@ class MainApplication : Application(), SingletonImageLoader.Factory, Configurati
 
     override fun onCreate() {
         super.onCreate()
-        if (AppContext(this).isDebugBuild()) {
-            Firebase.crashlytics.setCrashlyticsCollectionEnabled(false)
+        try {
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                FirebaseApp.initializeApp(
+                    this,
+                    FirebaseOptions.Builder()
+                        .setApplicationId("1:1234567890:android:0123456789abcdef")
+                        .setApiKey("AIzaSyDummyKeyForDevEnvironment12345")
+                        .setProjectId("pebble-expressive-dev")
+                        .build()
+                )
+            }
+            if (AppContext(this).isDebugBuild()) {
+                Firebase.crashlytics.setCrashlyticsCollectionEnabled(false)
+            }
+        } catch (e: Exception) {
+            // Safe fallback if Firebase is not configured
         }
         startKoin {
             modules(

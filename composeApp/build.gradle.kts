@@ -12,10 +12,13 @@ plugins {
 }
 
 kotlin {
-    val xcodeExists = providers.exec {
-        isIgnoreExitValue = true
-        commandLine("which", "xcode-select")
-    }.result.get().exitValue == 0
+    val isMac = System.getProperty("os.name").lowercase().contains("mac")
+    val xcodeExists = if (isMac) {
+        providers.exec {
+            isIgnoreExitValue = true
+            commandLine("which", "xcode-select")
+        }.result.get().exitValue == 0
+    } else false
     val xcodeDir = if (xcodeExists) {
         providers.exec {
             commandLine("xcode-select", "-p")

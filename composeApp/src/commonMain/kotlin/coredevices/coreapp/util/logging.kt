@@ -45,10 +45,10 @@ fun initLogging() {
                 val log = buildString {
                     append("[$tag] $message")
                 }
-                Firebase.crashlytics.log(log)
+                runCatching { Firebase.crashlytics.log(log) }
             }
             if (severity != Severity.Debug && severity != Severity.Verbose) {
-                throwable?.let { Firebase.crashlytics.recordException(it) }
+                throwable?.let { t -> runCatching { Firebase.crashlytics.recordException(t) } }
             }
         }
     })

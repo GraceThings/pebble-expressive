@@ -152,15 +152,9 @@ compose.resources {
     packageOfResClass = "coreapp.pebble.generated.resources"
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    compilerOptions {
-        freeCompilerArgs.addAll(listOf(
-            "-P",
-            "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=" +
-                    project.buildDir.absolutePath + "/compose_metrics",
-            "-P",
-            "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=" +
-                    project.buildDir.absolutePath + "/compose_metrics"
-        ))
+if (project.hasProperty("compose.enableMetrics")) {
+    composeCompiler {
+        metricsDestination.set(layout.buildDirectory.dir("compose_metrics"))
+        reportsDestination.set(layout.buildDirectory.dir("compose_metrics"))
     }
 }

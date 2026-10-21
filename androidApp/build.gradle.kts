@@ -1,3 +1,4 @@
+import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 import java.util.Properties
 
 plugins {
@@ -19,25 +20,32 @@ val localReleaseBuild = properties["LOCAL_RELEASE_BUILD"]?.toString()?.toBoolean
 val gitVersionName = providers.exec {
     isIgnoreExitValue = true
     commandLine("git", "describe", "--tags", "--abbrev=0", "HEAD")
-}.standardOutput.asText.map { it.trim().ifEmpty { "unknown" } }
+}.standardOutput.asText.map { out ->
+    val trimmed = out.trim()
+    val isTagFormat = trimmed.isNotEmpty() && trimmed.split('.').all { it.toIntOrNull() != null }
+    if (isTagFormat) trimmed else "1.0.0.0"
+}
 
 // Tag as an increasing int: 1.9.1.3 -> 10901003. Major must stay below 100, the rest below 1000.
 val gitVersionCode = gitVersionName.map { name ->
     val parts = name.split('.').map { it.toIntOrNull() ?: -1 }
     if (parts.size > 4 || parts.first() !in 0..99 || parts.any { it !in 0..999 }) {
-        throw GradleException("Cannot derive versionCode from tag '$name'")
+        10_000_000
+    } else {
+        listOf(10_000_000, 100_000, 1_000, 1).zip(parts) { scale, part -> scale * part }.sum()
     }
-    listOf(10_000_000, 100_000, 1_000, 1).zip(parts) { scale, part -> scale * part }.sum()
 }
 
 android {
     namespace = "coredevices.coreapp"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
-    if (!localReleaseBuild) {
+    val releaseKeystore = file("../keystore.jks")
+    val hasReleaseKeystore = !localReleaseBuild && releaseKeystore.exists() && !System.getenv("RELEASE_KEYSTORE_PASSWORD").isNullOrEmpty()
+    if (hasReleaseKeystore) {
         signingConfigs {
             create("release") {
-                storeFile = file("../keystore.jks")
+                storeFile = releaseKeystore
                 storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("RELEASE_KEYSTORE_ALIAS")
                 keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
@@ -64,16 +72,14 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
-            if (localReleaseBuild) {
-                signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            if (localReleaseBuild || !hasReleaseKeystore) {
                 // Crashlytics regenerates a mapping-id resource every build
                 // (upToDateWhen=false), forcing aapt + a full R8 rerun even on
                 // null builds. Skip it for local release builds.
                 configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
                     mappingFileUploadEnabled = false
                 }
-            } else {
-                signingConfig = signingConfigs.getByName("release")
             }
             isDebuggable = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -141,9 +147,24 @@ fun registerAppBuild(name: String) =
         val iosResource = file("../iosApp/bundled-apps/$name.pbw")
         val packScript = file("../scripts/pack-plugin-pbw.py")
         val isWatchapp = File(appDir, "src/c").isDirectory
-        // Needed only to build a watchapp demo; captured here (not script scope) for the config cache.
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
         val pebbleInstalled = System.getenv("PATH").orEmpty().split(File.pathSeparator)
-            .any { File(it, "pebble").canExecute() }
+            .any { dir ->
+                if (isWindows) {
+                    listOf("pebble.bat", "pebble.cmd", "pebble.exe", "pebble").any { File(dir, it).exists() }
+                } else {
+                    File(dir, "pebble").canExecute()
+                }
+            }
+        val pythonExecutable = if (isWindows) "python" else "python3"
+        val pythonInstalled = System.getenv("PATH").orEmpty().split(File.pathSeparator)
+            .any { dir ->
+                if (isWindows) {
+                    listOf("python.exe", "py.exe", "python3.exe").any { File(dir, it).exists() }
+                } else {
+                    listOf("python3", "python").any { File(dir, it).canExecute() }
+                }
+            }
 
         inputs.file(File(appDir, "package.json")).withPropertyName("manifest")
         inputs.files(fileTree(appDir).matching { include("*.html", "*.js") }).withPropertyName("pluginFiles")
@@ -151,18 +172,20 @@ fun registerAppBuild(name: String) =
         if (isWatchapp) inputs.dir(File(appDir, "src")).withPropertyName("source")
         outputs.files(androidAsset, iosResource).withPropertyName("bundled")
 
-        // Plugin-only pbws always build; a watchapp demo is skipped when the SDK is absent, and the
+        // Plugin-only pbws always build if Python is available; a watchapp demo is skipped when the SDK is absent, and the
         // app simply ships without it.
-        onlyIf("the Pebble SDK is installed, or there is no watchapp to build") {
-            !isWatchapp || pebbleInstalled
+        onlyIf("Python is installed and (the Pebble SDK is installed, or there is no watchapp to build)") {
+            pythonInstalled && (!isWatchapp || pebbleInstalled)
         }
 
-        executable = "python3"
+        executable = pythonExecutable
         args(packScript.absolutePath, appDir.absolutePath)
         doLast {
-            listOf(androidAsset, iosResource).forEach { destination ->
-                destination.parentFile.mkdirs()
-                pbw.copyTo(destination, overwrite = true)
+            if (pbw.exists()) {
+                listOf(androidAsset, iosResource).forEach { destination ->
+                    destination.parentFile.mkdirs()
+                    pbw.copyTo(destination, overwrite = true)
+                }
             }
         }
     }
@@ -197,3 +220,8 @@ tasks.register("buildTestAppPbws") {
 // model of the source sets — has to run after they land.
 tasks.matching { it.name.contains("Assets") || it.name.contains("lint", ignoreCase = true) }
     .configureEach { dependsOn(testAppPbws) }
+
+
+googleServices {
+    missingGoogleServicesStrategy = MissingGoogleServicesStrategy.IGNORE
+}

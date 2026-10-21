@@ -5,6 +5,8 @@
 **.DS_Store
 /.kotlin
 **/build/
+.cxx/
+**/.cxx/
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/

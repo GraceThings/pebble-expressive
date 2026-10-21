@@ -162,8 +162,9 @@ dependencies {
 
 val headSha by lazy {
     project.providers.exec {
+        isIgnoreExitValue = true
         commandLine("git", "describe", "--always", "--dirty")
-    }.standardOutput.asText.get().trim()
+    }.standardOutput.asText.map { it.trim().ifEmpty { "unknown" } }.getOrElse("unknown")
 }
 val enableQa = System.getenv("QA")?.toBoolean() ?: properties.getProperty("QA")?.toBoolean() ?: true
 
