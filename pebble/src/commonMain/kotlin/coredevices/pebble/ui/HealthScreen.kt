@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,7 +74,7 @@ fun HealthScreen(topBarParams: TopBarParams, nav: NavBarNav) {
             ActivityCard(act, vm.selectedTimeRange, imperial)
             SleepCard(slp, vm.selectedTimeRange)
             if (hasHrmWatch) HeartRateCard(hr, vm.selectedTimeRange)
-            TextButton(
+            FilledTonalButton(
                 onClick = {
                     nav.navigateTo(
                         PebbleNavBarRoutes.WatchSettingsCategoryRoute(
@@ -82,11 +83,12 @@ fun HealthScreen(topBarParams: TopBarParams, nav: NavBarNav) {
                         )
                     )
                 },
-                modifier = Modifier.align(Alignment.CenterHorizontally),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 4.dp),
             ) {
-                Icon(Icons.Default.Settings, null, Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Health Settings")
+                Icon(Icons.Default.Settings, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Health Settings", fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(8.dp))
         }

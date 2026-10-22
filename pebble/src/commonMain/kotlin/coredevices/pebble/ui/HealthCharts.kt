@@ -60,7 +60,7 @@ internal val BarAlphaDimmed = 0.45f
 internal val ChartOverlayColor = Color.White.copy(alpha = 0.08f)
 internal val ScrubLineColor = Color.White.copy(alpha = 0.7f)
 internal val AxisLabelColor = Color.White.copy(alpha = 0.5f)
-internal val CardShape = RoundedCornerShape(4.dp)
+internal val CardShape = RoundedCornerShape(24.dp)
 
 internal class ScrubState { var scrubIndex by mutableStateOf<Int?>(null) }
 

@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -87,7 +88,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import coredevices.pebble.custom.ExpressiveSwitch
 import androidx.compose.material3.Text
@@ -616,17 +619,66 @@ fun WatchesScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                 val scope = rememberCoroutineScope()
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     // Reserve space so the last device rows can scroll clear of the floating
                     // add-device FAB (Scaffold does not reserve content padding for the FAB).
-                    contentPadding = PaddingValues(bottom = 88.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
                     state = listState,
                 ) {
+                    if (entries.isEmpty() && scanningStatus == ScanningStatus.NotScanning) {
+                        item {
+                            Card(
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp, vertical = 32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        modifier = Modifier.size(64.dp),
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.Watch,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(32.dp),
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "No devices connected",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Tap the + button below to scan and pair your Pebble watch or Index ring.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                            }
+                        }
+                    }
                     itemsIndexed(
                         items = entries,
                         key = { _, entry -> entry.key }
-                    ) { index, entry ->
+                    ) { _, entry ->
                         when (entry) {
                             is DeviceListEntry.Watch -> WatchItem(
                                 watch = entry.device,
@@ -640,11 +692,6 @@ fun WatchesScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                                 onRequestCompanion = { identifier ->
                                     screenUiContext?.let { requestCDMForInactiveIndex(it, identifier) }
                                 },
-                            )
-                        }
-                        if (index < entries.lastIndex) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                             )
                         }
                     }
@@ -829,183 +876,225 @@ fun RingItem(
     var companionApproved by remember(ring.identifier) {
         mutableStateOf(companionDevice.hasApprovedDevice(ring.identifier))
     }
-    ListItem(
-        headlineContent = {
-            Text(
-                text = ring.name,
-                fontSize = 23.sp,
-                fontWeight = if (ring is DiscoveredIndexDevice) FontWeight.Normal else FontWeight.Bold,
-            )
-        },
-        supportingContent = {
-            val stateText = when {
-                ring is DiscoveredIndexDevice -> when (ring.currentImage) {
-                    IndexImage.Failsafe -> "Failsafe mode"
-                    IndexImage.ProductionTest -> "Production test mode"
-                    IndexImage.Primary -> "Available to pair"
-                }
-                ring is InterviewedIndexDevice && ring.updating -> "Updating..."
-                coreConfig.disableRingBluetoothSync -> "Bluetooth Sync Disabled"
-                else -> "Ready"
-            }
-            Column {
-                Text(
-                    text = stateText,
-                    fontSize = 16.sp,
-                    fontWeight = if (ring is DiscoveredIndexDevice) FontWeight.Normal else FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 3.dp),
-                )
-                // Re-check once the system association dialog resolves so the
-                // warning clears if the user approved it.
-                when (ring) {
-                    is PairableIndexDevice -> {
-                        when (ring.pairingState) {
-                            is IndexPairingState.Error -> Text(
-                                text = "Pairing failure",
-                                color = MaterialTheme.colorScheme.error,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(vertical = 3.dp),
-                            )
+    val stateText = when {
+        ring is DiscoveredIndexDevice -> when (ring.currentImage) {
+            IndexImage.Failsafe -> "Failsafe mode"
+            IndexImage.ProductionTest -> "Production test mode"
+            IndexImage.Primary -> "Available to pair"
+        }
+        ring is InterviewedIndexDevice && ring.updating -> "Updating..."
+        coreConfig.disableRingBluetoothSync -> "Bluetooth Sync Disabled"
+        else -> "Ready"
+    }
+    val isReady = ring !is DiscoveredIndexDevice && !coreConfig.disableRingBluetoothSync
 
-                            IndexPairingState.Pairing -> {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(top = 5.dp)
-                                ) {
-                                    CircularWavyProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Pairing...")
-                                }
-                            }
-
-                            IndexPairingState.NotPaired -> {
-                            }
-                        }
-                        if (ring.pairingState is IndexPairingState.Error || ring.pairingState is IndexPairingState.NotPaired) {
-                            Button(
-                                onClick = {
-                                    if (coreConfig.disableRingBluetoothSync) {
-                                        showSyncDisabledDialog = true
-                                        return@Button
-                                    }
-                                    scope.launch {
-                                        uiContext?.let { companionDevice.registerDevice(ring.identifier, it, false) }
-                                        companionApproved = companionDevice.hasApprovedDevice(ring.identifier)
-                                        val result = try {
-                                            ring.pair()
-                                        } catch (e: Exception) {
-                                            null
-                                        }
-                                        when (result) {
-                                            is IndexPairingResult.Success -> {
-                                                coreAnalytics.logEvent("ring.pair_success")
-                                            }
-
-                                            is IndexPairingResult.PairingFailure -> {
-                                                coreAnalytics.logEvent(
-                                                    "ring.pair_failed",
-                                                    mapOf("reason" to "bonding_error")
-                                                )
-                                                if (
-                                                    result.cause is PairingRequestResult.RingAlreadyPaired ||
-                                                    (platform.isIOS && result.cause is PairingRequestResult.CreateBondFailed)
-                                                ) {
-                                                    showRingAlreadyPairedDialog = true
-                                                }
-                                            }
-
-                                            is IndexPairingResult.EraseFailed -> {
-                                                coreAnalytics.logEvent(
-                                                    "ring.pair_failed",
-                                                    mapOf("reason" to "erase_failed")
-                                                )
-                                            }
-
-                                            null -> {
-                                                coreAnalytics.logEvent(
-                                                    "ring.pair_failed",
-                                                    mapOf("reason" to "bonding_error")
-                                                )
-                                            }
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.padding(top = 5.dp)
-                            ) {
-                                Text("Pair")
-                            }
-                        }
-                    }
-
-                    is RepairableIndexDevice -> {
-                        var buttonEnabled by remember { mutableStateOf(true) }
-                        Button(
-                            enabled = buttonEnabled,
-                            onClick = {
-                                buttonEnabled = false
-                                scope.launch {
-                                    try {
-                                        ring.forceFailsafe()
-                                        // The ring reboots into failsafe under a new address; rescan
-                                        // so it is listed and the recovery scan loop picks it up.
-                                        libIndex.startScan()
-                                    } catch (e: Exception) {
-                                        logger.e(e) { "Failed to force failsafe: ${e.message}" }
-                                    }
-                                    buttonEnabled = true
-                                }
-                            },
-                            modifier = Modifier.padding(top = 5.dp)
-                        ) {
-                            Text("Restore firmware")
-                        }
-                    }
-
-                    is InterviewedIndexDevice if ring.updating -> {
-                        LinearWavyProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            // Top row: Avatar + Name & Status + Menu
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (isReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (isReady) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
                         )
                     }
-
-                    is DiscoveredIndexDevice if ring.currentImage == IndexImage.Failsafe -> {
-                        Text("Restoring - please wait...")
-                    }
-                    else -> {}
                 }
-                if (ring is KnownIndexDevice && !companionApproved && !coreConfig.disableRingBluetoothSync) {
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Limited background access",
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(top = 6.dp),
+                        text = ring.name,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 2.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    color = if (isReady) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+                                    shape = CircleShape,
+                                )
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stateText,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (isReady) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (ring is KnownIndexDevice) {
+                    RingMenu(ring)
+                }
+            }
+
+            // Body content & actions
+            when (ring) {
+                is PairableIndexDevice -> {
+                    when (ring.pairingState) {
+                        is IndexPairingState.Error -> Text(
+                            text = "Pairing failure",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+
+                        IndexPairingState.Pairing -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 8.dp),
+                            ) {
+                                CircularWavyProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Pairing...")
+                            }
+                        }
+
+                        IndexPairingState.NotPaired -> {}
+                    }
+                    if (ring.pairingState is IndexPairingState.Error || ring.pairingState is IndexPairingState.NotPaired) {
+                        Button(
+                            onClick = {
+                                if (coreConfig.disableRingBluetoothSync) {
+                                    showSyncDisabledDialog = true
+                                    return@Button
+                                }
+                                scope.launch {
+                                    uiContext?.let { companionDevice.registerDevice(ring.identifier, it, false) }
+                                    companionApproved = companionDevice.hasApprovedDevice(ring.identifier)
+                                    val result = try {
+                                        ring.pair()
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                    when (result) {
+                                        is IndexPairingResult.Success -> {
+                                            coreAnalytics.logEvent("ring.pair_success")
+                                        }
+
+                                        is IndexPairingResult.PairingFailure -> {
+                                            coreAnalytics.logEvent(
+                                                "ring.pair_failed",
+                                                mapOf("reason" to "bonding_error")
+                                            )
+                                            if (
+                                                result.cause is PairingRequestResult.RingAlreadyPaired ||
+                                                (platform.isIOS && result.cause is PairingRequestResult.CreateBondFailed)
+                                            ) {
+                                                showRingAlreadyPairedDialog = true
+                                            }
+                                        }
+
+                                        is IndexPairingResult.EraseFailed -> {
+                                            coreAnalytics.logEvent(
+                                                "ring.pair_failed",
+                                                mapOf("reason" to "erase_failed")
+                                            )
+                                        }
+
+                                        null -> {
+                                            coreAnalytics.logEvent(
+                                                "ring.pair_failed",
+                                                mapOf("reason" to "bonding_error")
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                        ) {
+                            Text("Pair", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                is RepairableIndexDevice -> {
+                    var buttonEnabled by remember { mutableStateOf(true) }
                     Button(
+                        enabled = buttonEnabled,
                         onClick = {
+                            buttonEnabled = false
                             scope.launch {
-                                onRequestCompanion(ring.identifier)
-                                // Re-check once the system association dialog resolves so the
-                                // warning clears if the user approved it.
-                                companionApproved = companionDevice.hasApprovedDevice(ring.identifier)
+                                try {
+                                    ring.forceFailsafe()
+                                    libIndex.startScan()
+                                } catch (e: Exception) {
+                                    logger.e(e) { "Failed to force failsafe: ${e.message}" }
+                                }
+                                buttonEnabled = true
                             }
                         },
-                        modifier = Modifier.padding(top = 5.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                     ) {
-                        Text("Enable background access")
+                        Text("Restore firmware", fontWeight = FontWeight.SemiBold)
                     }
                 }
+
+                is InterviewedIndexDevice if ring.updating -> {
+                    LinearWavyProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                    )
+                }
+
+                is DiscoveredIndexDevice if ring.currentImage == IndexImage.Failsafe -> {
+                    Text("Restoring - please wait...", modifier = Modifier.padding(top = 8.dp))
+                }
+                else -> {}
             }
-        },
-        trailingContent = {
-            if (ring is KnownIndexDevice) {
-                RingMenu(ring)
+            if (ring is KnownIndexDevice && !companionApproved && !coreConfig.disableRingBluetoothSync) {
+                Text(
+                    text = "Limited background access",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                Button(
+                    onClick = {
+                        scope.launch {
+                            onRequestCompanion(ring.identifier)
+                            companionApproved = companionDevice.hasApprovedDevice(ring.identifier)
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
+                    Text("Enable background access", fontWeight = FontWeight.SemiBold)
+                }
             }
-        },
-    )
+        }
+    }
 
     if (showSyncDisabledDialog) {
         M3Dialog(
@@ -1315,21 +1404,29 @@ fun WatchItem(
     allowedToConnect: Boolean,
     navBarNav: NavBarNav,
 ) {
-    ListItem(
-        headlineContent = {
-            WatchHeader(watch)
-        },
-        supportingContent = {
-            Column {
-                WatchDetails(
-                    watch = watch,
-                    bluetoothState = bluetoothState,
-                    allowedToConnect = allowedToConnect,
-                    navBarNav = navBarNav,
-                )
-            }
-        },
-    )
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            WatchDetails(
+                watch = watch,
+                bluetoothState = bluetoothState,
+                allowedToConnect = allowedToConnect,
+                navBarNav = navBarNav,
+            )
+        }
+    }
 }
 
 @Composable
@@ -2124,79 +2221,154 @@ fun WatchDetails(
     val firmwareUpdateInProgress =
         firmwareUpdateState !is FirmwareUpdater.FirmwareUpdateStatus.NotInProgress
     val languagePackInstallState = (watch as? ConnectedPebble.LanguageState)?.languagePackInstallState ?: LanguagePackInstallState.Idle()
-    Row {
-        Text(
-            text = watch.stateText(firmwareUpdateState, languagePackInstallState, coreConfig),
-            fontWeight = when {
-                watch.isActive() -> FontWeight.Bold
-                else -> FontWeight.Normal
-            },
-            fontSize = 16.sp,
-            modifier = Modifier.padding(vertical = 3.dp),
-        )
+    val isActive = watch.isActive()
+
+    // Top row: Avatar + Name & Status + Overflow Menu
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.size(48.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Watch,
+                    contentDescription = null,
+                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = watch.displayName(),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 2.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(
+                            color = if (isActive) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+                            shape = CircleShape,
+                        )
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = watch.stateText(firmwareUpdateState, languagePackInstallState, coreConfig),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = if (isActive) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        WatchMenu(watch, navBarNav)
     }
+
+    val watchColorText = remember(watch) {
+        watch.color()?.uiDescription
+    }
+    val devConnectionActive = if (watch is ConnectedPebbleDevice) {
+        val active by watch.devConnectionActive.collectAsState()
+        active
+    } else false
+
+    val batteryLevel = (watch as? ConnectedPebble.Battery)?.batteryLevel
+
+    if (watchColorText != null || batteryLevel != null || devConnectionActive) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (watchColorText != null) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Text(
+                        text = watchColorText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
+            if (batteryLevel != null) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Icon(
+                            imageVector = batteryLevel.batteryIcon(),
+                            contentDescription = "Battery",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "$batteryLevel%",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+            if (devConnectionActive) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.DeveloperBoard,
+                            contentDescription = "Developer connection active",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Dev",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     if (firmwareUpdateInProgress) {
         if (firmwareUpdateState is FirmwareUpdater.FirmwareUpdateStatus.InProgress) {
             val progress by firmwareUpdateState.progress.collectAsState()
             CoreLinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             )
         }
     } else if (languagePackInstallState is LanguagePackInstallState.Installing) {
         val progress by languagePackInstallState.progress.collectAsState()
         CoreLinearProgressIndicator(
             progress = { progress },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
         )
     }
-    val watchColorText = remember(watch) {
-        watch.color()?.uiDescription
-    }
-    FlowRow(verticalArrangement = Arrangement.Center) {
-        if (watch is ConnectedPebbleDevice) {
-            val devConnectionActive by watch.devConnectionActive.collectAsState()
-            if (devConnectionActive) {
-                Icon(
-                    imageVector = Icons.Outlined.DeveloperBoard,
-                    contentDescription = "Developer connection active",
-                    modifier = Modifier.size(18.dp).padding(end = 5.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        if (watchColorText != null) {
-            Text(
-                text = watchColorText,
-                fontSize = 12.sp,
-                lineHeight = 14.sp,
-                modifier = Modifier.padding(end = 5.dp).align(Alignment.CenterVertically),
-            )
-        }
-        if (watch is ConnectedPebble.Battery) {
-            val batteryLevel = watch.batteryLevel
-            if (batteryLevel != null) {
-                // Use a Row to keep Icon and Text together,
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(end = 5.dp)
-                ) {
-                    Icon(
-                        imageVector = batteryLevel.batteryIcon(),
-                        contentDescription = "Battery",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "$batteryLevel%",
-                        fontSize = 11.sp,
-                        lineHeight = 12.sp,
-                    )
-                }
-            }
-        }
-    }
-    Spacer(modifier = Modifier.height(5.dp))
+
     val firmwareUpdateAvailable =
         (watch as? ConnectedPebble.Firmware)?.firmwareUpdateAvailable?.result
     val firmwareUpdater = watch as? ConnectedPebble.Firmware
@@ -2236,13 +2408,12 @@ fun WatchDetails(
             icon = Icons.Default.SystemUpdateAlt,
             contentDescription = "Update PebbleOS",
             primaryColor = true,
-            modifier = Modifier.padding(vertical = 5.dp),
+            modifier = Modifier.padding(top = 10.dp),
         )
     } else if (firmwareUpdateAvailable is FirmwareUpdateCheckResult.UpdateCheckFailed) {
         Card(
             modifier = Modifier
-//                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(top = 10.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer
             )
@@ -2289,35 +2460,33 @@ fun WatchDetails(
             showBluetoothSettingsLink = false,
         )
     }
-    Row {
-        Box(modifier = Modifier.weight(1f)) {
-            if (watch is ActiveDevice) {
-                PebbleElevatedButton(
-                    text = "Disconnect",
-                    onClick = { watch.disconnect() },
-                    enabled = bluetoothState.enabled() && !firmwareUpdateInProgress,
-                    primaryColor = false,
-                    modifier = Modifier.padding(vertical = 5.dp),
-                )
-            } else if (watch !is DisconnectingPebbleDevice) {
-                val uiContext = rememberUiContext()
-                if (uiContext != null) {
-                    PebbleElevatedButton(
-                        text = "Connect",
-                        onClick = {
-                            scope.launch {
-                                companionDevice.registerDevice(watch.identifier, uiContext)
-                                watch.connect()
-                            }
-                        },
-                        enabled = bluetoothState.enabled() && allowedToConnect,
-                        primaryColor = false,
-                        modifier = Modifier.padding(vertical = 5.dp),
-                    )
-                }
+
+    if (watch is ActiveDevice) {
+        OutlinedButton(
+            onClick = { watch.disconnect() },
+            enabled = bluetoothState.enabled() && !firmwareUpdateInProgress,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+        ) {
+            Text("Disconnect", fontWeight = FontWeight.SemiBold)
+        }
+    } else if (watch !is DisconnectingPebbleDevice) {
+        val uiContext = rememberUiContext()
+        if (uiContext != null) {
+            Button(
+                onClick = {
+                    scope.launch {
+                        companionDevice.registerDevice(watch.identifier, uiContext)
+                        watch.connect()
+                    }
+                },
+                enabled = bluetoothState.enabled() && allowedToConnect,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            ) {
+                Text("Connect", fontWeight = FontWeight.SemiBold)
             }
         }
-        WatchMenu(watch, navBarNav)
     }
 }
 

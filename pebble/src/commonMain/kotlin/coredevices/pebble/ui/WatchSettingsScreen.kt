@@ -65,6 +65,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -2515,18 +2516,117 @@ fun WatchSettingsCategoryScreen(
             contentPadding = PaddingValues(horizontal = 0.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item {
-                ExpressiveListCard {
-                    filteredItems.forEachIndexed { index, item ->
-                        item.Item()
-                        if (index < filteredItems.size - 1) {
-                            ExpressiveListDivider()
+            if (section == Section.Health) {
+                val trackingIds = setOf(
+                    EnableHealthTracking,
+                    SettingsIds.HrmEnabled,
+                    SettingsIds.HrmMeasurementInterval,
+                    SettingsIds.HrmActivityTracking
+                )
+                val insightsIds = setOf(
+                    EnableActivityInsights,
+                    EnableSleepInsights
+                )
+                val profileIds = setOf(
+                    SettingsIds.HealthHeight,
+                    SettingsIds.HealthWeight,
+                    SettingsIds.HealthAge,
+                    SettingsIds.HealthGenderId
+                )
+                val syncIds = setOf(
+                    EnableHealthPlatformSync
+                )
+
+                val trackingItems = filteredItems.filter { it.id in trackingIds }
+                val insightsItems = filteredItems.filter { it.id in insightsIds }
+                val profileItems = filteredItems.filter { it.id in profileIds }
+                val syncItems = filteredItems.filter { it.id in syncIds || it.title == "Sync Now" || it.title == "Open Google Fit" }
+                val otherItems = filteredItems.filter {
+                    it !in trackingItems && it !in insightsItems && it !in profileItems && it !in syncItems
+                }
+
+                if (trackingItems.isNotEmpty()) {
+                    item {
+                        ExpressiveListSectionHeader("Health Tracking")
+                        ExpressiveListCard {
+                            trackingItems.forEachIndexed { index, item ->
+                                item.Item()
+                                if (index < trackingItems.size - 1) {
+                                    ExpressiveListDivider()
+                                }
+                            }
                         }
                     }
                 }
-            }
-            item {
-                ExpressiveListFooter()
+                if (insightsItems.isNotEmpty()) {
+                    item {
+                        ExpressiveListSectionHeader("Insights")
+                        ExpressiveListCard {
+                            insightsItems.forEachIndexed { index, item ->
+                                item.Item()
+                                if (index < insightsItems.size - 1) {
+                                    ExpressiveListDivider()
+                                }
+                            }
+                        }
+                    }
+                }
+                if (profileItems.isNotEmpty()) {
+                    item {
+                        ExpressiveListSectionHeader("Personal Profile")
+                        ExpressiveListCard {
+                            profileItems.forEachIndexed { index, item ->
+                                item.Item()
+                                if (index < profileItems.size - 1) {
+                                    ExpressiveListDivider()
+                                }
+                            }
+                        }
+                    }
+                }
+                if (syncItems.isNotEmpty()) {
+                    item {
+                        ExpressiveListSectionHeader("Data Sync")
+                        ExpressiveListCard {
+                            syncItems.forEachIndexed { index, item ->
+                                item.Item()
+                                if (index < syncItems.size - 1) {
+                                    ExpressiveListDivider()
+                                }
+                            }
+                        }
+                    }
+                }
+                if (otherItems.isNotEmpty()) {
+                    item {
+                        ExpressiveListSectionHeader("Preferences")
+                        ExpressiveListCard {
+                            otherItems.forEachIndexed { index, item ->
+                                item.Item()
+                                if (index < otherItems.size - 1) {
+                                    ExpressiveListDivider()
+                                }
+                            }
+                        }
+                    }
+                }
+                item {
+                    ExpressiveListFooter()
+                }
+            } else {
+                item {
+                    ExpressiveListCard {
+                        filteredItems.forEachIndexed { index, item ->
+                            item.Item()
+                            if (index < filteredItems.size - 1) {
+                                ExpressiveListDivider()
+                            }
+                        }
+                    }
+                }
+                item {
+                    ExpressiveListFooter()
+                }
             }
         }
     }
@@ -2730,7 +2830,11 @@ fun basicSettingsNumberFieldItem(
                 containerColor = Color.Transparent,
             ),
             headlineContent = {
-                Text(title)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             },
             supportingContent = {
                 val minL = min.toLong()
@@ -2753,15 +2857,21 @@ fun basicSettingsNumberFieldItem(
                         )
                     }
                 }
-                Column {
+                Column(modifier = Modifier.padding(top = 2.dp)) {
                     if (description != null) {
-                        Text(description, fontSize = 11.sp)
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(vertical = 4.dp),
                     ) {
-                        IconButton(
+                        FilledTonalIconButton(
                             onClick = {
                                 val newVal = (value - 1).coerceIn(minL, maxL)
                                 if (newVal != value) {
@@ -2769,8 +2879,10 @@ fun basicSettingsNumberFieldItem(
                                 }
                             },
                             enabled = value > minL,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.size(40.dp),
                         ) {
-                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(18.dp))
                         }
                         OutlinedTextField(
                             value = textFieldValue,
@@ -2791,16 +2903,27 @@ fun basicSettingsNumberFieldItem(
                                     onValueChange(finalParsed)
                                 }
                             },
+                            shape = RoundedCornerShape(12.dp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            suffix = { Text(unit) },
+                            suffix = {
+                                Text(
+                                    text = unit,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                            ),
                             modifier = Modifier
-                                .width(110.dp)
+                                .width(115.dp)
                                 .onFocusChanged { focusState ->
                                     isFocused = focusState.isFocused
                                 },
                         )
-                        IconButton(
+                        FilledTonalIconButton(
                             onClick = {
                                 val newVal = (value + 1).coerceIn(minL, maxL)
                                 if (newVal != value) {
@@ -2808,15 +2931,23 @@ fun basicSettingsNumberFieldItem(
                                 }
                             },
                             enabled = value < maxL,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.size(40.dp),
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Increase")
+                            Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(18.dp))
                         }
                         if (valueFormatter != null) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = valueFormatter(value),
-                                fontSize = 14.sp,
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                            ) {
+                                Text(
+                                    text = valueFormatter(value),
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         if (defaultValue != null) {
