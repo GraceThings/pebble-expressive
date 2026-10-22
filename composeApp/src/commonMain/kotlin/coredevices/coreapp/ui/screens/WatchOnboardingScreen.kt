@@ -6,30 +6,46 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Watch
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +61,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -57,6 +74,7 @@ import coredevices.pebble.services.LanguagePackRepository
 import coredevices.pebble.services.PebbleWebServices
 import coredevices.pebble.services.StoreOnboarding
 import coredevices.pebble.ui.CommonAppType
+import coredevices.pebble.ui.InstallReviewDialog
 import coredevices.pebble.ui.LanguageDialog
 import coredevices.pebble.ui.NativeLockerAddUtil
 import coredevices.pebble.ui.NativeWatchfaceMainContent
@@ -83,7 +101,6 @@ import coredevices.pebble.ui.languagePackInstalled
 import coredevices.pebble.ui.launchApp
 import coredevices.pebble.ui.rememberSettingsItemsState
 import coredevices.ui.CoreLinearProgressIndicator
-import coredevices.ui.PebbleElevatedButton
 import io.rebble.libpebblecommon.connection.ConnectedPebbleDevice
 import io.rebble.libpebblecommon.connection.ConnectedPebbleDeviceInRecovery
 import io.rebble.libpebblecommon.connection.FirmwareUpdateCheckResult
@@ -97,15 +114,16 @@ import io.rebble.libpebblecommon.metadata.WatchHardwarePlatform
 import io.rebble.libpebblecommon.metadata.WatchType
 import io.rebble.libpebblecommon.metadata.supportsHrm
 import io.rebble.libpebblecommon.packets.ProtocolCapsFlag
+import io.rebble.libpebblecommon.permissions.InstallReview
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import theme.AppTheme
+import theme.coreGrey
+import theme.coreOrange
 import theme.onboardingScheme
 import kotlin.time.Duration.Companion.seconds
-import coredevices.pebble.ui.InstallReviewDialog
-import io.rebble.libpebblecommon.permissions.InstallReview
 
 private val logger = Logger.withTag("OnboardingScreen")
 
@@ -115,6 +133,7 @@ fun WatchOnboardingScreen(
 ) {
     val scope = rememberCoroutineScope()
     val connectedWatch = connectedWatch()
+    val pebbleDevice = connectedWatch as? ConnectedPebbleDevice
     val pebbleWebServices: PebbleWebServices = koinInject()
     var loadingHomes by remember { mutableStateOf(true) }
     val pebbleStoreHomes = remember { mutableStateMapOf<AppType, AppStoreHomeResult?>() }
@@ -129,22 +148,22 @@ fun WatchOnboardingScreen(
         navBarNav = null,
         snackbarDisplay = snackbarDisplay,
     )
-    if (connectedWatch != null) {
-        LaunchedEffect(Unit) {
-            launch {
-                delay(6.seconds)
-                // Don't block entire screen on loading apps - but try to make it feel
-                // "together" by showing everything at once
-                loadingHomes = false
-            }
-            val results = pebbleWebServices.fetchPebbleAppStoreHomes(
-                connectedWatch.watchType.watchType,
-                useCache = true
-            )
-            pebbleStoreHomes.clear()
-            pebbleStoreHomes.putAll(results)
+
+    val targetWatchType = connectedWatch?.watchType?.watchType ?: WatchType.BASALT
+
+    LaunchedEffect(targetWatchType) {
+        launch {
+            delay(6.seconds)
+            // Don't block entire screen on loading apps - try to make it feel responsive
             loadingHomes = false
         }
+        val results = pebbleWebServices.fetchPebbleAppStoreHomes(
+            targetWatchType,
+            useCache = true
+        )
+        pebbleStoreHomes.clear()
+        pebbleStoreHomes.putAll(results)
+        loadingHomes = false
     }
 
     val scrollState = rememberScrollState()
@@ -154,42 +173,86 @@ fun WatchOnboardingScreen(
         ) { windowInsets ->
             Box(modifier = Modifier.padding(windowInsets).fillMaxSize()) {
                 Column(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
                         .verticalScrollbar(scrollState)
-                        .padding(20.dp)
+                        .padding(horizontal = 16.dp, vertical = 20.dp)
                         .verticalScroll(scrollState),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    // Hero Header
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.2f),
+                        modifier = Modifier.size(56.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Outlined.Watch,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = "Get Started!",
-                        fontSize = 35.sp,
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Let's personalize your Pebble watch experience",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                        textAlign = TextAlign.Center,
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    if (connectedWatch == null) {
-                        haveStartedFwupSinceLastConnection = false
-                        if (haveUpdatedFirmware) {
-                            SectionText("Waiting for your Pebble to restart..")
-                        } else {
-                            SectionText("Waiting for your Pebble to connect..")
-                        }
-
-                        Spacer(modifier = Modifier.height(15.dp))
-                    }
-
                     if (connectedWatch is ConnectedPebbleDeviceInRecovery) {
                         val firmwareUpdateAvailable = connectedWatch.firmwareUpdateAvailable.result
                         if (firmwareUpdateAvailable !is FirmwareUpdateCheckResult.FoundUpdate) {
-                            SectionText("Checking for PebbleOS updates..")
-
-                            Spacer(modifier = Modifier.height(15.dp))
-
-                            PebbleElevatedButton(
-                                text = "Skip Setup",
-                                onClick = { coreNav.goBack() },
-                                primaryColor = true,
-                            )
+                            Card(
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White,
+                                    contentColor = coreGrey,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    CircularWavyProgressIndicator(
+                                        modifier = Modifier.size(40.dp),
+                                        color = coreOrange,
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "Checking for PebbleOS updates...",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = coreGrey,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = { coreNav.goBack() },
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = coreOrange,
+                                            contentColor = Color.White,
+                                        ),
+                                    ) {
+                                        Text("Skip Setup")
+                                    }
+                                }
+                            }
                             return@Scaffold
                         }
 
@@ -202,134 +265,397 @@ fun WatchOnboardingScreen(
                             }
                         }
 
-                        SectionText("Updating your watch to the latest version of PebbleOS...")
-                        Spacer(modifier = Modifier.height(15.dp))
-                        val progress = (connectedWatch.firmwareUpdateState as? FirmwareUpdater.FirmwareUpdateStatus.InProgress)?.progress?.collectAsState()
-                        if (progress != null) {
-                            CoreLinearProgressIndicator(
-                                progress = { progress.value },
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                            )
-                        }
-                        SectionDivider()
-                    }
-
-                    if (connectedWatch !is ConnectedPebbleDevice) {
-                        SectionText("Once your Pebble is connected, we'll get it set up")
-
-                        Spacer(modifier = Modifier.height(15.dp))
-
-                        PebbleElevatedButton(
-                            text = "Skip Setup",
-                            onClick = { coreNav.goBack() },
-                            primaryColor = true,
-                        )
-                    } else {
-                        if (loadingHomes) {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.align(Alignment.CenterHorizontally).padding(5.dp),
-                            )
-                            return@Scaffold
-                        }
-
-                        OnboardingAppCarousel(
-                            header = "Add some Watchfaces",
-                            storeHome = pebbleStoreHomes[AppType.Watchface],
-                            connectedWatch,
-                            footerText = null,
-                            snackbarDisplay = snackbarDisplay,
-                        )
-
-                        OnboardingAppCarousel(
-                            header = "Add some Apps",
-                            storeHome = pebbleStoreHomes[AppType.Watchapp],
-                            connectedWatch,
-                            footerText = "Get more apps from the Pebble App Store!",
-                            snackbarDisplay = snackbarDisplay,
-                        )
-
-                        val languagePackRepository: LanguagePackRepository = koinInject()
-                        val languagePackInstalled = connectedWatch.languagePackInstalled(languagePackRepository)
-                        val installingLanguagePack =
-                            connectedWatch.languagePackInstallState.installing()
-                        SectionText("Install a language pack")
-                        Spacer(modifier = Modifier.height(15.dp))
-                        if (installingLanguagePack != null) {
-                            Text("Installing $installingLanguagePack")
-                            Spacer(modifier = Modifier.height(15.dp))
-                        } else if (languagePackInstalled != null) {
-                            Text("Currently installed: $languagePackInstalled")
-                            Spacer(modifier = Modifier.height(15.dp))
-                        }
-                        val languagePackInstallState = connectedWatch.languagePackInstallState as? LanguagePackInstallState.Installing
-                        if (languagePackInstallState != null) {
-                            val progress by languagePackInstallState.progress.collectAsState()
-                            CoreLinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                            )
-                        }
-                        PebbleElevatedButton(
-                            text = "Choose Language",
-                            onClick = { showLanguageDialog = true },
-                            primaryColor = true,
-                            icon = Icons.Outlined.Language,
-                            enabled = installingLanguagePack == null,
-                        )
-                        if (showLanguageDialog) {
-                            AppTheme {
-                                LanguageDialog(
-                                    connectedWatch,
-                                    onDismissRequest = { showLanguageDialog = false })
-                            }
-                        }
-
-                        SectionDivider()
-
-                        // Support settings sync
-                        if (connectedWatch.capabilities.contains(ProtocolCapsFlag.SupportsBlobDbVersion)) {
-                            SectionText("Configure your watch")
-                            Spacer(modifier = Modifier.height(15.dp))
-
-                            settings.Show(BoolWatchPref.Clock24h.id)
-                            settings.Show(EnableHealthTracking)
-                            if (connectedWatch.color?.supportsHrm() == true) {
-                                settings.Show(HrmEnabled)
-                                settings.Show(HrmMeasurementInterval)
-                                settings.Show(HrmActivityTracking)
-                            }
-                            settings.Show(EnableActivityInsights)
-                            settings.Show(EnableSleepInsights)
-                            settings.Show(HealthImperialUnits)
-                            settings.Show(HealthHeight)
-                            settings.Show(HealthWeight)
-                            settings.Show(HealthAge)
-                            settings.Show(HealthGenderId)
-                            settings.Show(EnableHealthPlatformSync)
-                            Spacer(modifier = Modifier.height(15.dp))
-                        }
-
-                        if (connectedWatch.capabilities.contains(ProtocolCapsFlag.SupportsAppDictation)) {
-                            SectionText("Speech Recognition")
-                            Spacer(modifier = Modifier.height(15.dp))
-                            settings.Show(OfflineSpeechRecognition)
-                            SectionDivider()
-                        }
-
-                        Text("Configure more in Settings", textAlign = TextAlign.Center)
-                        SectionDivider()
-
-                        PebbleElevatedButton(
-                            text = "Finished",
-                            onClick = {
-                                scope.launch {
-                                    watchOnboardingFinished.finished.trySend(Unit)
-                                    coreNav.goBack()
+                        Card(
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White,
+                                contentColor = coreGrey,
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(
+                                    text = "Updating PebbleOS to latest version...",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = coreGrey,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                val progress = (connectedWatch.firmwareUpdateState as? FirmwareUpdater.FirmwareUpdateStatus.InProgress)?.progress?.collectAsState()
+                                if (progress != null) {
+                                    CoreLinearProgressIndicator(
+                                        progress = { progress.value },
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                                    )
                                 }
-                            },
-                            primaryColor = true,
+                            }
+                        }
+                        SectionDivider()
+                    }
+
+                    if (pebbleDevice == null) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color.White.copy(alpha = 0.18f),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Watch,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = "Previewing setup. Connect your Pebble anytime in Devices.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    if (loadingHomes) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                color = Color.White,
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Loading watchfaces & apps...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.9f),
+                            )
+                        }
+                        return@Scaffold
+                    }
+
+                    // Watchfaces Carousel
+                    OnboardingAppCarousel(
+                        header = "Add some Watchfaces",
+                        storeHome = pebbleStoreHomes[AppType.Watchface],
+                        watch = pebbleDevice,
+                        footerText = null,
+                        snackbarDisplay = snackbarDisplay,
+                    )
+
+                    SectionDivider()
+
+                    // Apps Carousel
+                    OnboardingAppCarousel(
+                        header = "Add some Apps",
+                        storeHome = pebbleStoreHomes[AppType.Watchapp],
+                        watch = pebbleDevice,
+                        footerText = "Get more apps from the Pebble App Store!",
+                        snackbarDisplay = snackbarDisplay,
+                    )
+
+                    SectionDivider()
+
+                    // Language Pack Section
+                    val languagePackRepository: LanguagePackRepository = koinInject()
+                    val languagePackInstalled = pebbleDevice?.languagePackInstalled(languagePackRepository)
+                    val installingLanguagePack =
+                        pebbleDevice?.languagePackInstallState?.installing()
+
+                    AppTheme {
+                        Card(
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White,
+                                contentColor = coreGrey,
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = coreOrange.copy(alpha = 0.12f),
+                                        modifier = Modifier.size(44.dp),
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Language,
+                                                contentDescription = null,
+                                                tint = coreOrange,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                        }
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Language Pack",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = coreGrey,
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        if (installingLanguagePack != null) {
+                                            Text(
+                                                text = "Installing $installingLanguagePack...",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = coreOrange,
+                                                fontWeight = FontWeight.Medium,
+                                            )
+                                        } else if (languagePackInstalled != null) {
+                                            Text(
+                                                text = "Installed: $languagePackInstalled",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = coreGrey.copy(alpha = 0.7f),
+                                            )
+                                        } else {
+                                            Text(
+                                                text = "English (Built-in)",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = coreGrey.copy(alpha = 0.7f),
+                                            )
+                                        }
+                                    }
+                                }
+
+                                val languagePackInstallState = pebbleDevice?.languagePackInstallState as? LanguagePackInstallState.Installing
+                                if (languagePackInstallState != null) {
+                                    val progress by languagePackInstallState.progress.collectAsState()
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    LinearWavyProgressIndicator(
+                                        progress = { progress },
+                                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                                        color = coreOrange,
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Button(
+                                    onClick = {
+                                        if (pebbleDevice != null) {
+                                            showLanguageDialog = true
+                                        } else {
+                                            snackbarDisplay.showSnackbar("Connect a Pebble watch to install language packs")
+                                        }
+                                    },
+                                    enabled = installingLanguagePack == null,
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = coreOrange,
+                                        contentColor = Color.White,
+                                    ),
+                                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Language,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Choose Language",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (showLanguageDialog && pebbleDevice != null) {
+                        AppTheme {
+                            LanguageDialog(
+                                pebbleDevice,
+                                onDismissRequest = { showLanguageDialog = false })
+                        }
+                    }
+
+                    // Speech Recognition Card
+                    if (pebbleDevice == null || pebbleDevice.capabilities.contains(ProtocolCapsFlag.SupportsAppDictation)) {
+                        SectionDivider()
+                        AppTheme {
+                            Card(
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White,
+                                    contentColor = coreGrey,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = coreOrange.copy(alpha = 0.12f),
+                                            modifier = Modifier.size(44.dp),
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Mic,
+                                                    contentDescription = null,
+                                                    tint = coreOrange,
+                                                    modifier = Modifier.size(24.dp),
+                                                )
+                                            }
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Speech Recognition",
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                color = coreGrey,
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "Voice dictation & transcription mode",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = coreGrey.copy(alpha = 0.7f),
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    settings.Show(OfflineSpeechRecognition)
+                                }
+                            }
+                        }
+                    }
+
+                    // Watch Preferences Card (BlobDB supported or default)
+                    if (pebbleDevice == null || pebbleDevice.capabilities.contains(ProtocolCapsFlag.SupportsBlobDbVersion)) {
+                        SectionDivider()
+                        AppTheme {
+                            Card(
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White,
+                                    contentColor = coreGrey,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = coreOrange.copy(alpha = 0.12f),
+                                            modifier = Modifier.size(44.dp),
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Tune,
+                                                    contentDescription = null,
+                                                    tint = coreOrange,
+                                                    modifier = Modifier.size(24.dp),
+                                                )
+                                            }
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Watch Preferences",
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                color = coreGrey,
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "Clock format & health tracking",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = coreGrey.copy(alpha = 0.7f),
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    settings.Show(BoolWatchPref.Clock24h.id)
+                                    settings.Show(EnableHealthTracking)
+                                    if (pebbleDevice?.color?.supportsHrm() == true || pebbleDevice == null) {
+                                        settings.Show(HrmEnabled)
+                                        settings.Show(HrmMeasurementInterval)
+                                        settings.Show(HrmActivityTracking)
+                                    }
+                                    settings.Show(EnableActivityInsights)
+                                    settings.Show(EnableSleepInsights)
+                                    settings.Show(HealthImperialUnits)
+                                    settings.Show(HealthHeight)
+                                    settings.Show(HealthWeight)
+                                    settings.Show(HealthAge)
+                                    settings.Show(HealthGenderId)
+                                    settings.Show(EnableHealthPlatformSync)
+                                }
+                            }
+                        }
+                    }
+
+                    // Bottom Finish Section
+                    SectionDivider()
+
+                    Text(
+                        text = "You can change any of these settings later in Settings.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.85f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                watchOnboardingFinished.finished.trySend(Unit)
+                                coreNav.goBack()
+                            }
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = coreOrange,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 4.dp,
+                            pressedElevation = 8.dp,
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
+                            .height(52.dp),
+                    ) {
+                        Text(
+                            text = "Finish Setup",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
@@ -356,20 +682,10 @@ private fun Modifier.verticalScrollbar(
 }
 
 @Composable
-fun SectionText(text: String) {
-    Text(
-        text = text,
-        textAlign = TextAlign.Center,
-        fontWeight = FontWeight.Bold,
-        fontSize = 20.sp,
-    )
-}
-
-@Composable
 fun SectionDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(vertical = 25.dp),
-        color = Color.White,
+        modifier = Modifier.padding(vertical = 20.dp, horizontal = 12.dp),
+        color = Color.White.copy(alpha = 0.25f),
     )
 }
 
@@ -391,7 +707,7 @@ fun SettingsItemsState?.Show(id: String) {
 fun OnboardingAppCarousel(
     header: String,
     storeHome: AppStoreHomeResult?,
-    watch: ConnectedPebbleDevice,
+    watch: ConnectedPebbleDevice?,
     footerText: String?,
     snackbarDisplay: SnackbarDisplay,
 ) {
@@ -401,11 +717,11 @@ fun OnboardingAppCarousel(
     val platform: Platform = koinInject()
     val libPebble: LibPebble = koinInject()
     val allCollectionUuids = allCollectionUuids()
-    // Only use inital list of in-collection IDs (i.e. don't remove from list when they add from this screen)
+    // Only use initial list of in-collection IDs (i.e. don't remove from list when they add from this screen)
     val initialAllCollectionUuids = remember(allCollectionUuids != null) { allCollectionUuids.orEmpty() }
     val nativeLockerAddUtil: NativeLockerAddUtil = koinInject()
     val scope = rememberCoroutineScope()
-    val watchType = watch.watchType.watchType
+    val watchType = watch?.watchType?.watchType ?: WatchType.BASALT
     val apps = remember(storeHome, watchType, initialAllCollectionUuids) {
         storeHome.result.onboarding?.forType(watchType)?.mapNotNull { appId ->
             storeHome.result.applications.find { app ->
@@ -423,39 +739,85 @@ fun OnboardingAppCarousel(
     if (apps.isNullOrEmpty()) {
         return
     }
-    SectionText(header)
 
-    Spacer(modifier = Modifier.height(15.dp))
+    // Expressive Section Header
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = Color.White.copy(alpha = 0.2f),
+            modifier = Modifier.size(36.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (header.contains("Watchface", ignoreCase = true)) Icons.Default.Watch else Icons.Default.Apps,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        Text(
+            text = header,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = Color.White,
+        )
+    }
 
-    LazyRow(
+    Spacer(modifier = Modifier.height(10.dp))
+
+    // Material 3 Expressive Multi-Browse Carousel (with dynamic expanding/shrinking items)
+    val carouselState = rememberCarouselState { apps.size }
+    HorizontalMultiBrowseCarousel(
+        state = carouselState,
+        preferredItemWidth = 145.dp,
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
-        contentPadding = PaddingValues(horizontal = 5.dp),
-    ) {
-        items(apps, key = { it.uuid }) { entry ->
-            var added by remember { mutableStateOf(false) }
-            var review by remember { mutableStateOf<InstallReview?>(null) }
-            val commonAppStore = entry.commonAppType as? CommonAppType.Store ?: return@items
+            .padding(vertical = 4.dp),
+        itemSpacing = 8.dp,
+        contentPadding = PaddingValues(horizontal = 4.dp),
+    ) { index ->
+        val entry = apps[index]
+        var added by remember { mutableStateOf(false) }
+        var review by remember { mutableStateOf<InstallReview?>(null) }
+        val commonAppStore = entry.commonAppType as? CommonAppType.Store ?: return@HorizontalMultiBrowseCarousel
+        val isAdded = entry.uuid in allCollectionUuids.orEmpty()
+
+        AppTheme {
             Card(
-                modifier = Modifier.padding(3.dp)
-                    .width(125.dp),
+                modifier = Modifier
+                    .maskClip(RoundedCornerShape(20.dp))
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.91f),
-                    contentColor = Color.Black,
+                    containerColor = Color.White,
+                    contentColor = coreGrey,
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 3.dp,
+                    pressedElevation = 6.dp,
                 ),
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                ) {
                     NativeWatchfaceMainContent(
                         entry = entry,
                         highlightInLocker = false,
-                        topBarParams = null
+                        topBarParams = null,
                     )
-                    if (entry.uuid in allCollectionUuids.orEmpty()) {
-                        PebbleElevatedButton(
-                            text = "Remove",
+                    Spacer(modifier = Modifier.height(6.dp))
+                    if (isAdded) {
+                        FilledTonalButton(
                             onClick = {
                                 added = false
                                 GlobalScope.launch {
@@ -466,9 +828,21 @@ fun OnboardingAppCarousel(
                                     logger.v { "Remove from locker from watch onboarding ${commonAppStore.storeApp?.title}" }
                                 }
                             },
-                            primaryColor = true,
-                            icon = Icons.Default.RemoveCircle,
-                        )
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.height(36.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Added",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            )
+                        }
                     } else {
                         fun add(granted: Map<String, Boolean?>) {
                             added = true
@@ -483,11 +857,13 @@ fun OnboardingAppCarousel(
                                     snackbarDisplay.showSnackbar("Failed to add app")
                                     return@launch
                                 }
-                                libPebble.launchApp(
-                                    entry = entry,
-                                    snackbarDisplay = NoOpSnackbarDisplay,
-                                    connectedIdentifier = watch.identifier,
-                                )
+                                if (watch != null) {
+                                    libPebble.launchApp(
+                                        entry = entry,
+                                        snackbarDisplay = NoOpSnackbarDisplay,
+                                        connectedIdentifier = watch.identifier,
+                                    )
+                                }
                             }
                         }
                         review?.let { pending ->
@@ -496,8 +872,7 @@ fun OnboardingAppCarousel(
                                 if (granted != null) add(granted) else added = false
                             }
                         }
-                        PebbleElevatedButton(
-                            text = "Add",
+                        Button(
                             onClick = {
                                 added = true
                                 scope.launch {
@@ -505,27 +880,67 @@ fun OnboardingAppCarousel(
                                     if (appReview == null) add(emptyMap()) else review = appReview
                                 }
                             },
-                            primaryColor = true,
                             enabled = !added,
-                            icon = Icons.Default.Add,
-                        )
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = coreOrange,
+                                contentColor = Color.White,
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.height(36.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Add",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            )
+                        }
                     }
-                    Spacer(modifier = Modifier.height(5.dp))
                 }
             }
         }
     }
+
     footerText?.let {
-        Spacer(modifier = Modifier.height(15.dp))
-        Text(footerText, textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White.copy(alpha = 0.18f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Storefront,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
     }
-    SectionDivider()
 }
 
 object NoOpSnackbarDisplay : SnackbarDisplay {
     override fun showSnackbar(message: String) {}
 }
-
 
 fun StoreOnboarding.forType(watchType: WatchType): List<String>? = when (watchType) {
     WatchType.APLITE -> aplite

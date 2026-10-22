@@ -4,15 +4,22 @@ import CommonRoutes
 import CoreNav
 import CoreRoute
 import NoOpCoreNav
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -606,10 +613,8 @@ fun WatchHomeScreen(
                                         scrollToTopFlow.tryEmit(Unit)
                                     }
                                 } else {
-                                    // Disable animations when switching between tabs
-                                    viewModel.disableNextTransitionAnimation.value = true
+                                    viewModel.selectedTab.value = route
                                 }
-                                viewModel.selectedTab.value = route
                             },
                             icon = {
                                 BadgedBox(
@@ -741,28 +746,136 @@ fun WatchHomeScreen(
                     bottom = if (imeVisible) 0.dp else windowInsets.calculateBottomPadding(),
                 )
             }
-            // Wrap each tab's NavHost in SaveableStateHolder to preserve state
-            saveableStateHolder.SaveableStateProvider(key = currentTab) {
-                NavHost(
-                    pebbleNavHostController,
-                    startDestination = currentTab.route,
-                    modifier = Modifier.padding(effectiveInsets),
-                ) {
-                    addNavBarRoutes(navBarNav, topBarParams, indexScreen, scopedCoreNav, viewModel)
-                    // Register Ring/Index detail routes inside the inner
-                    // NavHost so they render with the bottom NavigationBar
-                    // still visible.
-                    addExperimentalRoutes(scopedCoreNav)
+            // Wrap each tab's NavHost in AnimatedContent with horizontal slide animation
+            AnimatedContent(
+                targetState = currentTab,
+                transitionSpec = {
+                    val initialIdx = currentEntries.indexOf(initialState).coerceAtLeast(0)
+                    val targetIdx = currentEntries.indexOf(targetState).coerceAtLeast(0)
+                    if (targetIdx > initialIdx) {
+                        (slideInHorizontally(
+                            initialOffsetX = { it },
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(200)))
+                            .togetherWith(
+                                slideOutHorizontally(
+                                    targetOffsetX = { -it },
+                                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                                ) + fadeOut(animationSpec = tween(200))
+                            )
+                    } else {
+                        (slideInHorizontally(
+                            initialOffsetX = { -it },
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(200)))
+                            .togetherWith(
+                                slideOutHorizontally(
+                                    targetOffsetX = { it },
+                                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                                ) + fadeOut(animationSpec = tween(200))
+                            )
+                    }
+                },
+                label = "TabContentAnimation",
+                modifier = Modifier.fillMaxSize(),
+            ) { tab ->
+                val tabController = navControllers[tab] ?: pebbleNavHostController
+                val tabScopedCoreNav = remember(tabController, coreNav, isInnerScopedRoute) {
+                    object : CoreNav {
+                        override fun navigateTo(route: CoreRoute) {
+                            if (isInnerScopedRoute(route)) {
+                                tabController.navigate(route)
+                            } else {
+                                coreNav.navigateTo(route)
+                            }
+                        }
+
+                        override fun goBack() {
+                            if (tabController.previousBackStackEntry != null) {
+                                tabController.popBackStack()
+                            } else {
+                                coreNav.goBack()
+                            }
+                        }
+
+                        override fun goBackToPebble() {
+                            coreNav.goBackToPebble()
+                        }
+
+                        override fun replaceWith(route: CoreRoute) {
+                            if (isInnerScopedRoute(route)) {
+                                tabController.popBackStack()
+                                tabController.navigate(route)
+                            } else {
+                                coreNav.replaceWith(route)
+                            }
+                        }
+                    }
                 }
-                // Handle back button when search bar is visible
-                // Placed AFTER NavHost so it registers later and takes priority
-                BackHandler(enabled = params.searchState?.show == true) {
-                    params.searchState?.show = false
-                    params.searchState?.query = ""
+                val tabNavBarNav = remember(tabController, tabScopedCoreNav) {
+                    object : NavBarNav {
+                        override fun navigateTo(route: CoreRoute) {
+                            tabScopedCoreNav.navigateTo(route)
+                        }
+
+                        override fun navigateTo(route: NavBarRoute) {
+                            tabController.navigate(route)
+                        }
+
+                        override fun goBack() {
+                            if (tabController.previousBackStackEntry != null) {
+                                tabController.popBackStack()
+                            }
+                        }
+                    }
                 }
-                BackHandler(enabled = params.searchState?.show != true && !params.canGoBack) {
-                    if (!moveCurrentTaskToBackground(rootBackUiContext)) {
-                        coreNav.goBack()
+
+                saveableStateHolder.SaveableStateProvider(key = tab) {
+                    NavHost(
+                        tabController,
+                        startDestination = tab.route,
+                        modifier = Modifier.padding(effectiveInsets),
+                        enterTransition = {
+                            slideInHorizontally(
+                                initialOffsetX = { it },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(300))
+                        },
+                        exitTransition = {
+                            slideOutHorizontally(
+                                targetOffsetX = { -it / 3 },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(150))
+                        },
+                        popEnterTransition = {
+                            slideInHorizontally(
+                                initialOffsetX = { -it / 3 },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(300))
+                        },
+                        popExitTransition = {
+                            slideOutHorizontally(
+                                targetOffsetX = { it },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(150))
+                        },
+                    ) {
+                        addNavBarRoutes(tabNavBarNav, topBarParams, indexScreen, tabScopedCoreNav, viewModel)
+                        // Register Ring/Index detail routes inside the inner
+                        // NavHost so they render with the bottom NavigationBar
+                        // still visible.
+                        addExperimentalRoutes(tabScopedCoreNav)
+                    }
+                    // Handle back button when search bar is visible
+                    // Placed AFTER NavHost so it registers later and takes priority
+                    BackHandler(enabled = (tab == currentTab) && params.searchState?.show == true) {
+                        params.searchState?.show = false
+                        params.searchState?.query = ""
+                    }
+                    BackHandler(enabled = (tab == currentTab) && params.searchState?.show != true && !params.canGoBack) {
+                        if (!moveCurrentTaskToBackground(rootBackUiContext)) {
+                            coreNav.goBack()
+                        }
                     }
                 }
             }
