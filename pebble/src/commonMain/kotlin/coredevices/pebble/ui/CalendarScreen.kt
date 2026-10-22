@@ -17,6 +17,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import coredevices.pebble.custom.ExpressiveListCard
+import coredevices.pebble.custom.ExpressiveListDivider
+import coredevices.pebble.custom.ExpressiveListFooter
+import coredevices.pebble.custom.ExpressiveListSectionHeader
+import coredevices.pebble.custom.ExpressiveToggleListItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -127,37 +132,31 @@ fun CalendarScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                 val groupedCalendars = calendars.groupBy { it.ownerName }
                 groupedCalendars.forEach { (ownerName, calendarList) ->
                     item {
-                        Text(
-                            text = ownerName,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(
-                                start = 16.dp,
-                                top = 8.dp,
-                                bottom = 8.dp,
-                            )
-                        )
-                        HorizontalDivider()
-                    }
-
-                    items(calendarList.size) { i ->
-                        val entry = calendarList[i]
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = entry.enabled,
-                                onCheckedChange = { isChecked ->
-                                    libPebble.updateCalendarEnabled(entry.id, isChecked)
+                        ExpressiveListSectionHeader(title = ownerName)
+                        ExpressiveListCard(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        ) {
+                            calendarList.forEachIndexed { idx, entry ->
+                                if (idx > 0) {
+                                    ExpressiveListDivider()
                                 }
-                            )
-                            Text(entry.name)
-                        }
-                        if (entry.enabled && (!entry.syncEvents || !entry.visible)) {
-                            Row {
-                                Text(
-                                    text = "Not synced by Android - toggle checkbox to ask Android to sync",
-                                    color = coreOrange,
+                                ExpressiveToggleListItem(
+                                    headlineText = entry.name,
+                                    supportingText = if (entry.enabled && (!entry.syncEvents || !entry.visible))
+                                        "Not synced by Android - toggle checkbox to ask Android to sync"
+                                    else null,
+                                    checked = entry.enabled,
+                                    onCheckedChange = { isChecked ->
+                                        libPebble.updateCalendarEnabled(entry.id, isChecked)
+                                    }
                                 )
                             }
                         }
+                    }
+                }
+                if (calendars.isNotEmpty()) {
+                    item {
+                        ExpressiveListFooter("Calendar")
                     }
                 }
             }

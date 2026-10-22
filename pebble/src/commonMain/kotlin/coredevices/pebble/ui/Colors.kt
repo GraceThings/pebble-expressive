@@ -39,6 +39,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
@@ -332,7 +335,7 @@ fun SelectColorOrNone(
     onChangeColor: (TimelineColor?) -> Unit,
     availableColors: List<TimelineColor>? = null,
     defaultToListTab: Boolean = false,
-    useSheet: Boolean = false,
+    useSheet: Boolean = true,
 ) {
     var showColorChooser by remember { mutableStateOf(false) }
     if (showColorChooser) {
@@ -364,44 +367,45 @@ fun SelectColorOrNone(
             )
         }
     }
+    val color = remember(currentColorName) { TimelineColor.findByName(currentColorName) }
+    val colorPreview = color?.argbColor()?.let { Color(it) }
     ListItem(
         headlineContent = {
-            Text("Color")
+            Text(
+                text = "Color",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
         },
         supportingContent = {
-            val surfaceColor = MaterialTheme.colorScheme.surface
-            val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-            val color = remember(currentColorName) { TimelineColor.findByName(currentColorName) }
-            val bgColor = remember(color, surfaceColor) {
-                color?.argbColor()?.let { Color(it) } ?: surfaceColor
-            }
-            val textColor =
-                remember(color, onSurfaceColor) { color?.toHsvColor()?.textColor ?: onSurfaceColor }
-            Box(modifier = Modifier.padding(4.dp)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(bgColor, shape = RoundedCornerShape(8.dp))
-                ) {
-                    Text(
-                        text = color?.displayName ?: "Default",
-                        color = textColor,
-                        modifier = Modifier.padding(vertical = 6.dp, horizontal = 8.dp),
-                    )
-                }
-            }
+            Text(
+                text = color?.displayName ?: "Default",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         },
         trailingContent = {
-            PebbleElevatedButton(
-                text = "Select",
-                onClick = {
-                    showColorChooser = true
-                },
-                icon = Icons.Default.ColorLens,
-                contentDescription = "Select color",
-                primaryColor = true,
-                modifier = Modifier.padding(8.dp),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (colorPreview != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .background(colorPreview, shape = CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    )
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Default.ArrowForward,
+                    contentDescription = "Select color",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable {
+            showColorChooser = true
         },
     )
 }
@@ -607,25 +611,176 @@ private fun ChannelSlider(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RgbColorPickerSheet(
+    initialRgb: UInt,
+    defaultRgb: UInt,
+    presets: List<RgbColorPreset>,
+    onColorSelected: (UInt) -> Unit,
+    onDismissWithoutResult: () -> Unit,
+) {
+    var red by remember { mutableStateOf(((initialRgb shr 16) and 0xFFu).toInt()) }
+    var green by remember { mutableStateOf(((initialRgb shr 8) and 0xFFu).toInt()) }
+    var blue by remember { mutableStateOf((initialRgb and 0xFFu).toInt()) }
+    var hexInput by remember {
+        mutableStateOf(initialRgb.and(0x00FFFFFFu).toString(16).padStart(6, '0').uppercase())
+    }
+    val rgb = ((red shl 16) or (green shl 8) or blue).toUInt() and 0x00FFFFFFu
+    val previewColor = Color(0xFF000000u.toInt() or rgb.toInt())
+
+    fun setRgb(value: UInt) {
+        red = ((value shr 16) and 0xFFu).toInt()
+        green = ((value shr 8) and 0xFFu).toInt()
+        blue = (value and 0xFFu).toInt()
+        hexInput = value.and(0x00FFFFFFu).toString(16).padStart(6, '0').uppercase()
+    }
+
+    fun applyHex(text: String) {
+        val sanitized = text.removePrefix("#").trim()
+        sanitized.toUIntOrNull(16)?.takeIf { it <= 0xFFFFFFu }?.let { parsed ->
+            red = ((parsed shr 16) and 0xFFu).toInt()
+            green = ((parsed shr 8) and 0xFFu).toInt()
+            blue = (parsed and 0xFFu).toInt()
+        }
+    }
+
+    val focusManager = LocalFocusManager.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissWithoutResult,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Choose RGB Color",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Row {
+                    TextButton(
+                        onClick = { setRgb(defaultRgb) },
+                        enabled = rgb != (defaultRgb and 0x00FFFFFFu),
+                    ) { Text("Reset") }
+                    TextButton(onClick = { onColorSelected(rgb) }) { Text("Done") }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(previewColor)
+                    .padding(vertical = 24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "#" + rgb.toString(16).padStart(6, '0').uppercase(),
+                    color = if (previewColor.luminance() > 0.55f) Color.Black else Color.White,
+                )
+            }
+
+            if (presets.isNotEmpty()) {
+                Text("Presets", modifier = Modifier.padding(bottom = 4.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    presets.chunked(PRESETS_PER_ROW).forEach { rowPresets ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            rowPresets.forEach { preset ->
+                                PresetChip(
+                                    preset = preset,
+                                    isSelected = preset.rgb == rgb,
+                                    onClick = { setRgb(preset.rgb) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            repeat(PRESETS_PER_ROW - rowPresets.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+
+            ChannelSlider("R", red, Color.Red) {
+                red = it
+                hexInput = rgb.toString(16).padStart(6, '0').uppercase()
+            }
+            ChannelSlider("G", green, Color.Green) {
+                green = it
+                hexInput = rgb.toString(16).padStart(6, '0').uppercase()
+            }
+            ChannelSlider("B", blue, Color.Blue) {
+                blue = it
+                hexInput = rgb.toString(16).padStart(6, '0').uppercase()
+            }
+
+            OutlinedTextField(
+                value = hexInput,
+                onValueChange = {
+                    hexInput = it.uppercase().take(6)
+                    applyHex(hexInput)
+                },
+                label = { Text("Hex") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            )
+        }
+    }
+}
+
 @Composable
 fun SelectRgbColor(
     currentRgb: UInt,
     defaultRgb: UInt,
     presets: List<RgbColorPreset>,
     onChangeColor: (UInt) -> Unit,
+    useSheet: Boolean = true,
 ) {
     var showPicker by remember { mutableStateOf(false) }
     if (showPicker) {
-        RgbColorPickerDialog(
-            initialRgb = currentRgb,
-            defaultRgb = defaultRgb,
-            presets = presets,
-            onColorSelected = {
-                onChangeColor(it)
-                showPicker = false
-            },
-            onDismissWithoutResult = { showPicker = false },
-        )
+        if (useSheet) {
+            RgbColorPickerSheet(
+                initialRgb = currentRgb,
+                defaultRgb = defaultRgb,
+                presets = presets,
+                onColorSelected = {
+                    onChangeColor(it)
+                    showPicker = false
+                },
+                onDismissWithoutResult = { showPicker = false },
+            )
+        } else {
+            RgbColorPickerDialog(
+                initialRgb = currentRgb,
+                defaultRgb = defaultRgb,
+                presets = presets,
+                onColorSelected = {
+                    onChangeColor(it)
+                    showPicker = false
+                },
+                onDismissWithoutResult = { showPicker = false },
+            )
+        }
     }
     val swatchColor = Color(0xFF000000u.toInt() or (currentRgb and 0x00FFFFFFu).toInt())
     val matchedPreset = presets.firstOrNull { it.rgb == currentRgb }

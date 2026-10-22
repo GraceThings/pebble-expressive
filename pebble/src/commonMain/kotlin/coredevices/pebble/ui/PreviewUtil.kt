@@ -129,8 +129,9 @@ private fun fakePebbleModule(appContext: AppContext) = module {
     }
     val themeProvider = object : ThemeProvider {
         override val theme: StateFlow<CoreAppTheme> = MutableStateFlow(CoreAppTheme.Dark)
-        override fun setTheme(theme: CoreAppTheme) {
-        }
+        override val dynamicColor: StateFlow<Boolean> = MutableStateFlow(false)
+        override fun setTheme(theme: CoreAppTheme) {}
+        override fun setDynamicColor(enabled: Boolean) {}
     }
     val firmwareUpdateUiTracker = object : FirmwareUpdateUiTracker {
         override fun didFirmwareUpdateCheckFromUi() {}

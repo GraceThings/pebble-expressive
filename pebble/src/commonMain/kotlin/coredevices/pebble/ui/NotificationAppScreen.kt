@@ -1,9 +1,19 @@
 package coredevices.pebble.ui
 
 import coredevices.ui.PebbleElevatedButton
+import coredevices.pebble.custom.ExpressiveListCard
+import coredevices.pebble.custom.ExpressiveListItem
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import coredevices.pebble.custom.ExpressiveListDivider
+import coredevices.pebble.custom.ExpressiveListFooter
+import coredevices.pebble.custom.ExpressiveListSectionHeader
+import coredevices.pebble.custom.ExpressiveSwitch
+import coredevices.pebble.custom.ExpressiveToggleListItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -132,159 +142,87 @@ fun NotificationAppScreen(
             val app = appWrapper.app
             val bootConfig = rememberBootConfig()
             LazyColumn(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                item {
-                    NotificationAppCard(
-                        entry = appWrapper,
-                        notificationApps = notificationApps,
-                        bootConfig = bootConfig,
-                        platform = platform,
-                        nav = nav,
-                        clickable = false,
-                        showBadge = false,
-                    )
+                item(key = "header_app_card") {
+                    ExpressiveListCard {
+                        NotificationAppCard(
+                            entry = appWrapper,
+                            notificationApps = notificationApps,
+                            bootConfig = bootConfig,
+                            platform = platform,
+                            nav = nav,
+                            clickable = false,
+                            showBadge = false,
+                        )
+                    }
                 }
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                item(key = "customization_group") {
+                    ExpressiveListSectionHeader("Feedback & Appearance")
+                    ExpressiveListCard {
+                        SelectVibePatternOrNone(
+                            currentPattern = appWrapper.app.vibePatternName,
+                            onChangePattern = { pattern ->
+                                notificationApps.updateNotificationAppState(
+                                    packageName = appWrapper.app.packageName,
+                                    vibePatternName = pattern?.name,
+                                    colorName = appWrapper.app.colorName,
+                                    iconCode = appWrapper.app.iconCode,
+                                )
+                            },
+                            useSheet = true,
+                        )
+                        ExpressiveListDivider()
+                        SelectColorOrNone(
+                            currentColorName = appWrapper.app.colorName,
+                            onChangeColor = { color ->
+                                notificationApps.updateNotificationAppState(
+                                    packageName = appWrapper.app.packageName,
+                                    vibePatternName = appWrapper.app.vibePatternName,
+                                    colorName = color?.name,
+                                    iconCode = appWrapper.app.iconCode,
+                                )
+                            },
+                            useSheet = true,
+                        )
+                        ExpressiveListDivider()
+                        SelectIconOrNone(
+                            currentIcon = TimelineIcon.fromCode(appWrapper.app.iconCode),
+                            onChangeIcon = { icon ->
+                                notificationApps.updateNotificationAppState(
+                                    packageName = appWrapper.app.packageName,
+                                    vibePatternName = appWrapper.app.vibePatternName,
+                                    colorName = appWrapper.app.colorName,
+                                    iconCode = icon?.code,
+                                )
+                            },
+                            useSheet = true,
+                        )
+                    }
                 }
-                item {
-                    SelectVibePatternOrNone(
-                        currentPattern = appWrapper.app.vibePatternName,
-                        onChangePattern = { pattern ->
-                            notificationApps.updateNotificationAppState(
-                                packageName = appWrapper.app.packageName,
-                                vibePatternName = pattern?.name,
-                                colorName = appWrapper.app.colorName,
-                                iconCode = appWrapper.app.iconCode,
-                            )
-                        },
-                        useSheet = true,
-                    )
-                }
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-                item {
-                    SelectColorOrNone(
-                        currentColorName = appWrapper.app.colorName,
-                        onChangeColor = { color ->
-                            notificationApps.updateNotificationAppState(
-                                packageName = appWrapper.app.packageName,
-                                vibePatternName = appWrapper.app.vibePatternName,
-                                colorName = color?.name,
-                                iconCode = appWrapper.app.iconCode,
-                            )
-                        },
-                        useSheet = true,
-                    )
-                }
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-                item {
-                    SelectIconOrNone(
-                        currentIcon = TimelineIcon.fromCode(appWrapper.app.iconCode),
-                        onChangeIcon = { icon ->
-                            notificationApps.updateNotificationAppState(
-                                packageName = appWrapper.app.packageName,
-                                vibePatternName = appWrapper.app.vibePatternName,
-                                colorName = appWrapper.app.colorName,
-                                iconCode = icon?.code,
-                            )
-                        },
-                        useSheet = true,
-                    )
-                }
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-                // Rules and channels sections - only available on Android
-                // (iOS doesn't have notification channels)
+
                 if (platform == Platform.Android) {
-                    item {
-                        ListItem(
-                            headlineContent = {
-                                Text("Channels", style = MaterialTheme.typography.titleMedium)
-                            },
-                            trailingContent = {
-                                FilterChip(
-                                    onClick = {
-                                        viewModel.onlyNotified.value = !viewModel.onlyNotified.value
-                                    },
-                                    label = {
-                                        Text("Notified only")
-                                    },
-                                    selected = viewModel.onlyNotified.value,
-                                    leadingIcon = if (viewModel.onlyNotified.value) {
-                                        {
-                                            Icon(
-                                                imageVector = Icons.Filled.Done,
-                                                contentDescription = "Done icon",
-                                                modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                            )
-                                        }
-                                    } else null,
-                                )
-                            }
-                        )
-                    }
-                    items(channelGroups) { group ->
-                        if (channelGroups.size > 1) {
-                            Text(
-                                text = group.name ?: "Default Group",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    item(key = "delivery_group") {
+                        ExpressiveListSectionHeader("Delivery Options")
+                        ExpressiveListCard {
+                            ExpressiveToggleListItem(
+                                headlineText = "Allow duplicate notifications",
+                                checked = appWrapper.app.allowDuplicates,
+                                onCheckedChange = { newValue ->
+                                    notificationApps.updateNotificationAppAllowDuplicates(
+                                        packageName = appWrapper.app.packageName,
+                                        allowDuplicates = newValue,
+                                    )
+                                },
                             )
-                        }
-                        group.channels.forEach { channel ->
-                            ChannelCard(
-                                channelItem = channel,
-                                app = app,
-                                notificationApps = notificationApps,
-                                channelCounts = channelCounts,
-                                nav = nav,
-                            )
-                        }
-                        if (group != channelGroups.last()) {
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                        }
-                    }
-                    item {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                    item {
-                        ListItem(
-                            headlineContent = {
-                                Text("Allow duplicate notifications", style = MaterialTheme.typography.bodyLarge)
-                            },
-                            trailingContent = {
-                                Switch(
-                                    checked = appWrapper.app.allowDuplicates,
-                                    onCheckedChange = { newValue ->
-                                        notificationApps.updateNotificationAppAllowDuplicates(
-                                            packageName = appWrapper.app.packageName,
-                                            allowDuplicates = newValue,
-                                        )
-                                    },
-                                )
-                            }
-                        )
-                    }
-                    item {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                    if (pebbleFeatures.supportsNotificationImages()) item {
-                        ListItem(
-                            headlineContent = {
-                                Text("Send images", style = MaterialTheme.typography.bodyLarge)
-                            },
-                            supportingContent = if (!sendImagesEnabledGlobally) {
-                                { Text("Disabled globally in settings", style = MaterialTheme.typography.bodySmall) }
-                            } else null,
-                            trailingContent = {
-                                Switch(
+                            if (pebbleFeatures.supportsNotificationImages()) {
+                                ExpressiveListDivider()
+                                ExpressiveToggleListItem(
+                                    headlineText = "Send images",
+                                    supportingText = if (!sendImagesEnabledGlobally) "Disabled globally in settings" else null,
                                     checked = appWrapper.app.sendImages,
                                     enabled = sendImagesEnabledGlobally,
                                     onCheckedChange = { newValue ->
@@ -295,22 +233,71 @@ fun NotificationAppScreen(
                                     },
                                 )
                             }
-                        )
+                        }
                     }
-                    item {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                    if (channelGroups.isNotEmpty()) {
+                        item(key = "channels_header") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "Channels",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                FilterChip(
+                                    onClick = {
+                                        viewModel.onlyNotified.value = !viewModel.onlyNotified.value
+                                    },
+                                    label = { Text("Notified only") },
+                                    selected = viewModel.onlyNotified.value,
+                                    leadingIcon = if (viewModel.onlyNotified.value) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Filled.Done,
+                                                contentDescription = "Done icon",
+                                                modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                            )
+                                        }
+                                    } else null,
+                                )
+                            }
+                        }
+                        item(key = "channels_card") {
+                            ExpressiveListCard {
+                                val allChannels = channelGroups.flatMap { it.channels }
+                                allChannels.forEachIndexed { index, channel ->
+                                    ChannelCard(
+                                        channelItem = channel,
+                                        app = app,
+                                        notificationApps = notificationApps,
+                                        channelCounts = channelCounts,
+                                        nav = nav,
+                                    )
+                                    if (index < allChannels.size - 1) {
+                                        ExpressiveListDivider()
+                                    }
+                                }
+                            }
+                        }
                     }
-                }
-                
-                // Notification filtering rules - synced to watch via BlobDB
-                item {
-                    NotificationRulesSection(
-                        app = appWrapper.app,
-                        notificationApps = notificationApps,
-                        platform = platform,
-                    )
                 }
 
+                item(key = "rules_group") {
+                    ExpressiveListSectionHeader("Filtering Rules")
+                    ExpressiveListCard {
+                        NotificationRulesSection(
+                            app = appWrapper.app,
+                            notificationApps = notificationApps,
+                            platform = platform,
+                        )
+                    }
+                }
                 item {
                     val expiration = app.muteExpiration
                     val now = Clock.System.now()
@@ -365,32 +352,31 @@ private fun NotificationRulesSection(
     var showDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        ListItem(
-            headlineContent = {
-                Text("Notification filter rules", style = MaterialTheme.typography.titleMedium)
-            },
-            supportingContent = {
-                Text(
-                    if (rules.isEmpty()) "No notification rules"
-                    else "Matching notifications will be blocked:",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        ExpressiveListItem(
+            headlineText = "Notification filter rules",
+            supportingText = if (rules.isEmpty()) "No rules configured · Tap to add"
+            else "${rules.size} rule(s) configured · Tap to add more",
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             },
             trailingContent = {
-                PebbleElevatedButton(
-                    text = "Add rule",
-                    onClick = {
-                        editingRule = null
-                        showDialog = true
-                    },
-                    icon = Icons.Filled.Add,
+                Icon(
+                    imageVector = Icons.AutoMirrored.Default.ArrowForward,
                     contentDescription = "Add rule",
-                    primaryColor = true,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
+            },
+            onClick = {
+                editingRule = null
+                showDialog = true
+            },
         )
         rules.forEach { rule ->
+            ExpressiveListDivider()
             val matchTypeLabel = if (rule.matchType == MatchType.Regex) "Regex" else "Text"
             val fieldLabel = when (rule.matchField) {
                 MatchField.Title -> "Title"
@@ -399,8 +385,9 @@ private fun NotificationRulesSection(
             }
             val caseLabel = if (rule.caseSensitive) "case-sensitive" else "case-insensitive"
             ListItem(
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 headlineContent = {
-                    Text(rule.pattern, style = MaterialTheme.typography.bodyMedium)
+                    Text(rule.pattern, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
                 },
                 supportingContent = {
                     Text(
@@ -415,20 +402,16 @@ private fun NotificationRulesSection(
                             editingRule = rule
                             showDialog = true
                         }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit rule")
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit rule", tint = MaterialTheme.colorScheme.primary)
                         }
                         IconButton(onClick = {
                             notificationApps.deleteNotificationRule(rule)
                         }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete rule")
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete rule", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
             )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-        }
-        if (rules.isEmpty()) {
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
     }
 
@@ -602,7 +585,7 @@ private fun ChannelCard(
                         modifier = Modifier.padding(start = 4.dp, end = 10.dp)
                     )
                 }
-                Switch(
+                ExpressiveSwitch(
                     checked = !channelMuted,
                     onCheckedChange = {
                         val toggledState = if (channelMuted) MuteState.Never else MuteState.Always
@@ -612,10 +595,6 @@ private fun ChannelCard(
                             muteState = toggledState,
                         )
                     },
-                    colors = SwitchDefaults.colors(
-                        checkedTrackColor = Color.Red,
-                        uncheckedTrackColor = Color.White
-                    ),
                     enabled = !appMuted,
                 )
             }

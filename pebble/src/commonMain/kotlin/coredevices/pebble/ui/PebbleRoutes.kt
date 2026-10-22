@@ -1,5 +1,7 @@
 package coredevices.pebble.ui
 
+import coredevices.pebble.custom.AppearanceSettingsScreen
+
 import CommonRoutes
 import CoreNav
 import CoreRoute
@@ -119,6 +121,14 @@ object PebbleNavBarRoutes {
 
     @Serializable
     data class WatchSettingsCategoryRoute(val section: String, val topLevelType: String) : NavBarRoute
+
+    // ========================================================
+    // [FORK-CUSTOM] START: Appearance Route
+    // ========================================================
+    @Serializable
+    data object AppearanceRoute : NavBarRoute
+    // ========================================================
+    // [FORK-CUSTOM] END
 }
 
 inline fun <reified T : Any> NavGraphBuilder.composableWithAnimations(
@@ -270,6 +280,14 @@ fun NavGraphBuilder.addNavBarRoutes(
             TopLevelType.valueOf(route.topLevelType),
         )
     }
+    // ========================================================
+    // [FORK-CUSTOM] START: Appearance Screen Route
+    // ========================================================
+    composableWithAnimations<PebbleNavBarRoutes.AppearanceRoute>(viewModel) {
+        AppearanceSettingsScreen(nav, topBarParams)
+    }
+    // ========================================================
+    // [FORK-CUSTOM] END
 }
 
 fun NavGraphBuilder.addPebbleRoutes(

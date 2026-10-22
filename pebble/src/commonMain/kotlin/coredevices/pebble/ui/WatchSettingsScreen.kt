@@ -67,6 +67,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -108,6 +111,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.ViewModel
+import coredevices.pebble.custom.ExpressiveListCard
+import coredevices.pebble.custom.ExpressiveListDivider
+import coredevices.pebble.custom.ExpressiveListFooter
+import coredevices.pebble.custom.ExpressiveListItem
+import coredevices.pebble.custom.ExpressiveListSectionHeader
+import coredevices.pebble.custom.ExpressiveSelectionSheet
+import coredevices.pebble.custom.ExpressiveSwitch
+import coredevices.pebble.custom.ExpressiveToggleListItem
 import co.touchlab.kermit.Logger
 import com.cactus.isCactusSupported
 import com.russhwolf.settings.Settings
@@ -185,6 +196,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import theme.CoreAppTheme
+import theme.isDynamicColorSupported
 import theme.ThemeProvider
 import theme.currentColorScheme
 import kotlin.math.roundToLong
@@ -341,6 +353,7 @@ fun rememberSettingsItemsState(navBarNav: NavBarNav?, snackbarDisplay: SnackbarD
     val themeProvider: ThemeProvider = koinInject()
     val settings: Settings = koinInject()
     val currentTheme by themeProvider.theme.collectAsState()
+    val dynamicThemeEnabled by themeProvider.dynamicColor.collectAsState()
     val pebbleFeatures = koinInject<PebbleFeatures>()
     val pebbleAccount = koinInject<PebbleAccount>()
     val loggedIn by pebbleAccount.loggedIn.collectAsState()
@@ -654,20 +667,22 @@ fun rememberSettingsItemsState(navBarNav: NavBarNav?, snackbarDisplay: SnackbarD
                     section = Section.Apps,
                     action = { nav.navigateTo(PebbleNavBarRoutes.AppstoreSettingsRoute()) },
                 ) },
-                basicSettingsDropdownItem(
-                    title = "App Theme",
+                // ========================================================
+                // [FORK-CUSTOM] START: Appearance Navigation Item
+                // ========================================================
+                navBarNav?.let { nav -> basicSettingsActionItem(
+                    title = "Appearance",
+                    description = "App theme, color scheme, and font",
                     topLevelType = TopLevelType.Phone,
                     section = Section.General,
-                    keywords = "dark light system",
-                    selectedItem = currentTheme,
-                    items = CoreAppTheme.entries,
-                    onItemSelected = {
-                        themeProvider.setTheme(it)
+                    keywords = "theme color font dark light appearance",
+                    actionIcon = Icons.AutoMirrored.Default.ArrowForward,
+                    action = {
+                        nav.navigateTo(PebbleNavBarRoutes.AppearanceRoute)
                     },
-                    itemText = {
-                        stringResource(it.resource)
-                    },
-                ),
+                ) },
+                // ========================================================
+                // [FORK-CUSTOM] END
                 basicSettingsToggleItem(
                     id = SettingsIds.HealthImperialUnits,
                     title = "Imperial Units",
@@ -2292,46 +2307,28 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                 }
 
                 if (isSearching) {
-                    // When searching, show all matching settings grouped by section (like before)
                     LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         groupedItemsToDisplay.forEach { (section, items) ->
-                            stickyHeader {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.background)
-                                        .padding(vertical = 4.dp),
-                                ) {
-                                    Text(
-                                        section.title,
-                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(
-                                            horizontal = 4.dp,
-                                            vertical = 4.dp,
-                                        )
-                                    )
+                            item(key = "header_${section.name}") {
+                                ExpressiveListSectionHeader(section.title)
+                            }
+                            item(key = "card_${section.name}") {
+                                ExpressiveListCard {
+                                    items.forEachIndexed { index, item ->
+                                        item.Item()
+                                        if (index < items.size - 1) {
+                                            ExpressiveListDivider()
+                                        }
+                                    }
                                 }
                             }
-                            items(
-                                items = items,
-                                key = { it.title },
-                            ) { item ->
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                    tonalElevation = 1.dp,
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    item.Item()
-                                }
-                            }
-                            item {
-                                Spacer(Modifier.height(4.dp))
-                            }
+                        }
+                        item(key = "search_footer") {
+                            ExpressiveListFooter()
                         }
                     }
                 } else {
@@ -2340,59 +2337,74 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                     val healthDisplaced = state.coreConfig.enableIndex &&
                         state.healthTrackingEnabled && !state.coreConfig.preferHealthTab
 
-                    // When not searching, show category list
+                    // When not searching, show category list in unified card
                     LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        if (notificationsDisplaced) {
-                            item(key = "displaced_notifications") {
-                                M3ESettingsCategoryItem(
-                                    title = "Notifications",
-                                    icon = Icons.AutoMirrored.Default.ArrowForward,
-                                    onClick = {
-                                        navBarNav.navigateTo(PebbleNavBarRoutes.NotificationsRoute)
-                                    },
-                                )
-                            }
-                        }
-                        if (healthDisplaced) {
-                            item(key = "displaced_health") {
-                                M3ESettingsCategoryItem(
-                                    title = "Health",
-                                    icon = Icons.AutoMirrored.Default.ArrowForward,
-                                    onClick = {
-                                        navBarNav.navigateTo(PebbleNavBarRoutes.HealthRoute)
-                                    },
-                                )
-                            }
-                        }
-                        items(
-                            items = sectionsToShowInList,
-                            key = { it.name },
-                        ) { section ->
-                            val sectionBadgeCount = filteredItems
-                                .filter { it.section == section && it.badge != null && it.show() }
-                                .sumOf { it.badge?.toIntOrNull() ?: 0 }
-                            M3ESettingsCategoryItem(
-                                title = section.title,
-                                icon = section.icon,
-                                badgeCount = sectionBadgeCount,
-                                onClick = {
-                                    val navigateDirectlyTo = section.navigatesDirectlyTo()
-                                    if (navigateDirectlyTo != null) {
-                                        navBarNav.navigateTo(navigateDirectlyTo)
-                                    } else {
-                                        navBarNav.navigateTo(
-                                            PebbleNavBarRoutes.WatchSettingsCategoryRoute(
-                                                section = section.name,
-                                                topLevelType = viewModel.selectedTopLevelType.name,
-                                            )
+                        item(key = "main_categories_card") {
+                            ExpressiveListSectionHeader("Settings")
+                            ExpressiveListCard {
+                                val allCategories = mutableListOf<@Composable () -> Unit>()
+                                if (notificationsDisplaced) {
+                                    allCategories.add {
+                                        M3ESettingsCategoryItem(
+                                            title = "Notifications",
+                                            icon = Icons.AutoMirrored.Default.ArrowForward,
+                                            onClick = {
+                                                navBarNav.navigateTo(PebbleNavBarRoutes.NotificationsRoute)
+                                            },
                                         )
                                     }
                                 }
-                            )
+                                if (healthDisplaced) {
+                                    allCategories.add {
+                                        M3ESettingsCategoryItem(
+                                            title = "Health",
+                                            icon = Icons.AutoMirrored.Default.ArrowForward,
+                                            onClick = {
+                                                navBarNav.navigateTo(PebbleNavBarRoutes.HealthRoute)
+                                            },
+                                        )
+                                    }
+                                }
+                                sectionsToShowInList.forEach { section ->
+                                    val sectionBadgeCount = filteredItems
+                                        .filter { it.section == section && it.badge != null && it.show() }
+                                        .sumOf { it.badge?.toIntOrNull() ?: 0 }
+                                    allCategories.add {
+                                        M3ESettingsCategoryItem(
+                                            title = section.title,
+                                            icon = section.icon,
+                                            badgeCount = sectionBadgeCount,
+                                            onClick = {
+                                                val navigateDirectlyTo = section.navigatesDirectlyTo()
+                                                if (navigateDirectlyTo != null) {
+                                                    navBarNav.navigateTo(navigateDirectlyTo)
+                                                } else {
+                                                    navBarNav.navigateTo(
+                                                        PebbleNavBarRoutes.WatchSettingsCategoryRoute(
+                                                            section = section.name,
+                                                            topLevelType = viewModel.selectedTopLevelType.name,
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+
+                                allCategories.forEachIndexed { index, comp ->
+                                    comp()
+                                    if (index < allCategories.size - 1) {
+                                        ExpressiveListDivider()
+                                    }
+                                }
+                            }
+                        }
+                        item(key = "main_footer") {
+                            ExpressiveListFooter()
                         }
                     }
                 }
@@ -2409,63 +2421,58 @@ private fun M3ESettingsCategoryItem(
     modifier: Modifier = Modifier,
     badgeCount: Int = 0,
 ) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 1.dp,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        ListItem(
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent,
-            ),
-            leadingContent = {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                }
-            },
-            headlineContent = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            },
-            trailingContent = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (badgeCount > 0) {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ) {
-                            Text("$badgeCount")
-                        }
-                    }
+    ListItem(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent,
+        ),
+        leadingContent = {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
+                        imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp),
                     )
                 }
-            },
-        )
-    }
+            }
+        },
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        trailingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (badgeCount > 0) {
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ) {
+                        Text("$badgeCount")
+                    }
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        },
+    )
 }
 
 @Composable
@@ -2505,21 +2512,21 @@ fun WatchSettingsCategoryScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            items(
-                items = filteredItems,
-                key = { it.title },
-            ) { item ->
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    tonalElevation = 1.dp,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    item.Item()
+            item {
+                ExpressiveListCard {
+                    filteredItems.forEachIndexed { index, item ->
+                        item.Item()
+                        if (index < filteredItems.size - 1) {
+                            ExpressiveListDivider()
+                        }
+                    }
                 }
+            }
+            item {
+                ExpressiveListFooter()
             }
         }
     }
@@ -2547,45 +2554,32 @@ fun basicSettingsActionItem(
     badge = badge,
     isDebugSetting = isDebugSetting,
     item = {
-        ListItem(
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent,
-            ),
-            headlineContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (badge != null) {
-                        Badge {
-                            Text(text = badge)
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(5.dp))
-                    if (button != null) {
-                        button()
-                    } else {
-                        Text(title)
+        ExpressiveListItem(
+            headlineText = title,
+            supportingText = description,
+            leadingContent = if (badge != null) {
+                {
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ) {
+                        Text(text = badge)
                     }
                 }
-            },
-            supportingContent = {
-                if (description != null) {
-                    Text(description, fontSize = 12.sp)
-                }
-            },
+            } else null,
             trailingContent = {
-                if (action != null) {
+                if (button != null) {
+                    button()
+                } else if (action != null) {
                     Icon(
                         imageVector = actionIcon ?: Icons.AutoMirrored.Default.ArrowForward,
                         contentDescription = null,
-                        modifier = Modifier.padding(start = 4.dp)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             },
-            shadowElevation = ELEVATION,
-            modifier = Modifier.run() {
-                if (action != null) {
-                    clickable { action() }
-                } else this
-            },
+            onClick = action,
         )
     },
     onDisplayed = onDisplayed,
@@ -2602,6 +2596,7 @@ fun basicSettingsToggleItem(
     keywords: String = "",
     show: () -> Boolean = { true },
     isDebugSetting: Boolean = false,
+    enabled: Boolean = true,
 ) = SettingsItem(
     id = id,
     title = title,
@@ -2611,26 +2606,12 @@ fun basicSettingsToggleItem(
     show = show,
     isDebugSetting = isDebugSetting,
     item = {
-        ListItem(
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent,
-            ),
-            headlineContent = {
-                Text(title)
-            },
-            leadingContent = {
-                Checkbox(
-                    checked = checked,
-                    onCheckedChange = onCheckChanged,
-                )
-            },
-            supportingContent = {
-                if (description != null) {
-                    Text(description, fontSize = 11.sp)
-                }
-            },
-            shadowElevation = ELEVATION,
-            modifier = Modifier.clickable { onCheckChanged(!checked) },
+        ExpressiveToggleListItem(
+            headlineText = title,
+            supportingText = description,
+            checked = checked,
+            onCheckedChange = onCheckChanged,
+            enabled = enabled,
         )
     },
 )
@@ -2884,50 +2865,46 @@ fun <T> basicSettingsDropdownItem(
     show = show,
     isDebugSetting = isDebugSetting,
     item = {
-        ListItem(
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent,
-            ),
-            headlineContent = {
-                Text(title)
-            },
+        var showSheet by remember { mutableStateOf(false) }
+        val currentText = itemText(selectedItem)
+        if (showSheet) {
+            ExpressiveSelectionSheet(
+                title = title,
+                items = items,
+                selectedItem = selectedItem,
+                itemText = itemText,
+                onItemSelected = {
+                    onItemSelected(it)
+                    showSheet = false
+                },
+                onDismissRequest = { showSheet = false },
+            )
+        }
+        ExpressiveListItem(
+            headlineText = title,
+            supportingText = description,
             trailingContent = {
-                var expanded by remember { mutableStateOf(false) }
-                Box {
-                    TextButton(onClick = { expanded = true }) {
-                        Text(
-                            text = itemText(selectedItem),
-                            modifier = Modifier.widthIn(max = 150.dp),
-                            maxLines = 2,
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        items.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(itemText(option)) },
-                                onClick = {
-                                    onItemSelected(option)
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = currentText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
             },
-            supportingContent = {
-                Row {
-                    if (description != null) {
-                        Text(description, fontSize = 11.sp)
-                    }
-                    extraSupportingContent?.invoke()
-                }
-            },
-            shadowElevation = ELEVATION,
+            onClick = { showSheet = true },
         )
-    }
+    },
 )
 
 private const val SHOW_DEBUG_OPTIONS_SETTINGS_KEY = "showDebugOptions"
@@ -2992,73 +2969,75 @@ fun PKJSCopyTokenDialog(onDismissRequest: () -> Unit) {
 
 expect fun getPlatformSTTLanguages(): List<Pair<String, String>>
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun STTLanguageDialog(
     onLanguageSelected: (String?) -> Unit,
     onDismissRequest: () -> Unit,
     selectedLanguage: String?,
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var targetLanguage by remember { mutableStateOf(selectedLanguage) }
-    M3Dialog(
+    ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        icon = { Icon(Icons.Default.Language, contentDescription = null) },
-        title = { Text("Select language") },
-        buttons = {
-            TextButton(
-                onClick = onDismissRequest
-            ) {
-                Text("Cancel")
-            }
-            TextButton(
-                onClick = {
-                    onLanguageSelected(targetLanguage)
-                }
-            ) {
-                Text("OK")
-            }
-        }
+        sheetState = sheetState,
     ) {
-        val supportedLanguages = remember { getPlatformSTTLanguages() }
-        LazyColumn {
-            items(supportedLanguages.size) {
-                val (code, name) = supportedLanguages[it]
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            targetLanguage = if (targetLanguage == code) {
-                                null
-                            } else {
-                                code
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text("Select language", style = MaterialTheme.typography.titleLarge)
+                }
+                Row {
+                    TextButton(onClick = onDismissRequest) { Text("Cancel") }
+                    TextButton(onClick = { onLanguageSelected(targetLanguage) }) { Text("OK") }
+                }
+            }
+            val supportedLanguages = remember { getPlatformSTTLanguages() }
+            LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 400.dp)) {
+                items(supportedLanguages.size) {
+                    val (code, name) = supportedLanguages[it]
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                targetLanguage = if (targetLanguage == code) null else code
                             }
-                        }
-                        .padding(16.dp)
-                ) {
-                    Checkbox(
-                        checked = targetLanguage == code,
-                        onCheckedChange = {
-                            targetLanguage = if (it) {
-                                code
-                            } else {
-                                null
+                            .padding(vertical = 12.dp, horizontal = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = targetLanguage == code,
+                            onCheckedChange = {
+                                targetLanguage = if (it) code else null
                             }
-                        }
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(name)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(name)
+                    }
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpokenLanguagePickerDialog(
     selectedCode: String?,
     onLanguageSelected: (String?) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var query by remember { mutableStateOf("") }
     val options = remember { SpokenLanguageOptions }
     val filtered = remember(query, options) {
@@ -3072,24 +3051,35 @@ fun SpokenLanguagePickerDialog(
         }
     }
     val showAutomatic = query.isBlank() || "automatic".contains(query.trim().lowercase())
-    M3Dialog(
+    ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        icon = { Icon(Icons.Default.Language, contentDescription = null) },
-        title = { Text("Spoken Language") },
-        buttons = {
-            TextButton(onClick = onDismissRequest) { Text("Cancel") }
-        },
+        sheetState = sheetState,
     ) {
-        Column(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text("Spoken Language", style = MaterialTheme.typography.titleLarge)
+                }
+                TextButton(onClick = onDismissRequest) { Text("Done") }
+            }
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 singleLine = true,
                 placeholder = { Text("Search languages") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
-            Spacer(Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+            LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 400.dp)) {
                 if (showAutomatic) {
                     item(key = "__automatic__") {
                         SpokenLanguageRow(

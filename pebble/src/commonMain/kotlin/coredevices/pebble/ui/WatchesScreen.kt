@@ -89,6 +89,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import coredevices.pebble.custom.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -1509,7 +1510,7 @@ fun WatchMenu(watch: PebbleDevice, navBarNav: NavBarNav) {
                 DropdownMenuItem(
                     text = { Text("Dev Connection") },
                     leadingIcon = { Icon(Icons.Outlined.DeveloperBoard, contentDescription = null) },
-                    trailingIcon = { Switch(
+                    trailingIcon = { ExpressiveSwitch(
                         checked = active,
                         onCheckedChange = null,
                     ) },

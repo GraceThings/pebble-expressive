@@ -16,7 +16,7 @@
         </receiver>
 
         <provider
-            android:authorities="coredevices.coreapp.pebblekit"
+            android:authorities="${applicationId}.pebblekit"
             android:name="io.rebble.libpebblecommon.pebblekit.two.PebbleKitProvider"
             android:exported="true" />
         <provider

@@ -485,7 +485,7 @@ Processed as:
     }
 }
 
-private fun LibPebbleNotification.isPebbleTestNotification(): Boolean = packageName == "coredevices.coreapp" &&
+private fun LibPebbleNotification.isPebbleTestNotification(): Boolean = (packageName == "coredevices.coreapp" || packageName == "io.github.gracethings.pebbleexpressive") &&
         title == "Test Notification"
 
 internal suspend fun decideNotification(

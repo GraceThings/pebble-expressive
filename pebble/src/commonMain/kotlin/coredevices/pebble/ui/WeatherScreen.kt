@@ -25,6 +25,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import coredevices.pebble.custom.ExpressiveListCard
+import coredevices.pebble.custom.ExpressiveListItem
+import coredevices.pebble.custom.ExpressiveListSectionHeader
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -161,17 +164,17 @@ fun WeatherScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                             ).shake(isDragging)
                                 .fillMaxWidth()
                         ) {
-                            ListItem(
-                                headlineContent = { Text(location.name) },
-                                supportingContent = {
-                                    Text(if (location.currentLocation) "Current Location" else "Fixed Location")
-                                },
-                                trailingContent = {
-                                    IconButton(onClick = { locationToDelete = location }) {
-                                        Icon(Icons.Filled.Delete, "Remove")
+                            ExpressiveListCard {
+                                ExpressiveListItem(
+                                    headlineText = location.name,
+                                    supportingText = if (location.currentLocation) "Current Location" else "Fixed Location",
+                                    trailingContent = {
+                                        IconButton(onClick = { locationToDelete = location }) {
+                                            Icon(Icons.Filled.Delete, "Remove")
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }

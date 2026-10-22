@@ -13,12 +13,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AppShortcut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -188,7 +193,7 @@ fun IconPickerSheet(
 fun SelectIconOrNone(
     currentIcon: TimelineIcon?,
     onChangeIcon: (TimelineIcon?) -> Unit,
-    useSheet: Boolean = false,
+    useSheet: Boolean = true,
 ) {
     var showIconChooser by remember { mutableStateOf(false) }
     if (showIconChooser) {
@@ -216,27 +221,36 @@ fun SelectIconOrNone(
     }
     ListItem(
         headlineContent = {
-            Text("Icon")
+            Text(
+                text = "Icon",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
         },
         supportingContent = {
-            Column {
-                currentIcon?.let { icon ->
-                    IconImage(icon, modifier = Modifier.size(45.dp))
-                }
-                Text(currentIcon?.name ?: "Default")
-            }
+            Text(
+                text = currentIcon?.name ?: "Default",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         },
         trailingContent = {
-            PebbleElevatedButton(
-                text = "Select",
-                onClick = {
-                    showIconChooser = true
-                },
-                icon = Icons.Default.AppShortcut,
-                contentDescription = "Select icon",
-                primaryColor = true,
-                modifier = Modifier.padding(8.dp),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (currentIcon != null) {
+                    IconImage(currentIcon, modifier = Modifier.size(24.dp))
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Default.ArrowForward,
+                    contentDescription = "Select icon",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable {
+            showIconChooser = true
         },
     )
 }

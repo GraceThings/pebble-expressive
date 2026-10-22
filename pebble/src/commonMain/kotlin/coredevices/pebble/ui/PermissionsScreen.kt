@@ -16,6 +16,12 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import coredevices.pebble.custom.ExpressiveListCard
+import coredevices.pebble.custom.ExpressiveListDivider
+import coredevices.pebble.custom.ExpressiveListFooter
+import coredevices.pebble.custom.ExpressiveListItem
+import coredevices.pebble.custom.ExpressiveListSectionHeader
+import coredevices.pebble.custom.ExpressiveToggleListItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,72 +66,65 @@ fun PermissionsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
             return
         }
 
-        LazyColumn {
+        LazyColumn(
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             item(key = "hide_badges_toggle") {
-                ListItem(
-                    headlineContent = { Text("Hide missing permission warnings") },
-                    supportingContent = {
-                        Text("Don't show a badge on Settings when permissions are missing")
-                    },
-                    trailingContent = {
-                        Switch(
-                            checked = coreConfig.hidePermissionWarningBadges,
-                            onCheckedChange = { checked ->
-                                coreConfigHolder.update(
-                                    coreConfig.copy(hidePermissionWarningBadges = checked)
-                                )
-                            },
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        coreConfigHolder.update(
-                            coreConfig.copy(
-                                hidePermissionWarningBadges = !coreConfig.hidePermissionWarningBadges
+                ExpressiveListSectionHeader("Preferences")
+                ExpressiveListCard {
+                    ExpressiveToggleListItem(
+                        headlineText = "Hide missing permission warnings",
+                        supportingText = "Don't show a badge on Settings when permissions are missing",
+                        checked = coreConfig.hidePermissionWarningBadges,
+                        onCheckedChange = { checked ->
+                            coreConfigHolder.update(
+                                coreConfig.copy(hidePermissionWarningBadges = checked)
                             )
-                        )
-                    },
-                )
-                HorizontalDivider()
+                        },
+                    )
+                }
             }
 
             if (missingPermissionsList.isEmpty()) {
                 item(key = "all_granted") {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(15.dp).fillMaxWidth(),
-                    ) {
-                        ElevatedCard(
-                            elevation = CardDefaults.cardElevation(
-                                defaultElevation = 6.dp
-                            ),
-                            modifier = Modifier.padding(15.dp),
-                        ) {
-                            Text("All permissions granted!", modifier = Modifier.padding(15.dp))
-                        }
+                    ExpressiveListSectionHeader("Status")
+                    ExpressiveListCard {
+                        ExpressiveListItem(
+                            headlineText = "All permissions granted!",
+                            supportingText = "All necessary device permissions are in place.",
+                        )
                     }
                 }
             } else {
-                items(missingPermissionsList, key = { it.name() }) { permission ->
-                    ListItem(
-                        headlineContent = {
-                            Text(text = permission.name())
-                        },
-                        supportingContent = {
-                            Text(text = permission.description())
-                        },
-                        modifier = Modifier.clickable {
-                            scope.launch {
-                                val granted =
-                                    permissionRequester.requestPermission(permission, uiContext)
-                                logger.d { "$permission granted = $granted" }
-                                if (granted == PermissionResult.RejectedForever) {
-                                    permissionRequester.openPermissionsScreen(uiContext)
-                                }
+                item(key = "missing_perms_group") {
+                    ExpressiveListSectionHeader("Required Permissions")
+                    ExpressiveListCard {
+                        missingPermissionsList.forEachIndexed { index, permission ->
+                            ExpressiveListItem(
+                                headlineText = permission.name(),
+                                supportingText = permission.description(),
+                                onClick = {
+                                    scope.launch {
+                                        val granted =
+                                            permissionRequester.requestPermission(permission, uiContext)
+                                        logger.d { "$permission granted = $granted" }
+                                        if (granted == PermissionResult.RejectedForever) {
+                                            permissionRequester.openPermissionsScreen(uiContext)
+                                        }
+                                    }
+                                },
+                            )
+                            if (index < missingPermissionsList.size - 1) {
+                                ExpressiveListDivider()
                             }
-                        },
-                    )
+                        }
+                    }
                 }
+            }
+
+            item(key = "footer") {
+                ExpressiveListFooter()
             }
         }
     }

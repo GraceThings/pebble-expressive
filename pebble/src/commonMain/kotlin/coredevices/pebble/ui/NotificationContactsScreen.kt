@@ -28,6 +28,7 @@ import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import coredevices.pebble.custom.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -214,7 +215,7 @@ fun ContactCard(entry: ContactWithCount, nav: NavBarNav, firstOrOnlyItem: Boolea
         },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(
+                ExpressiveSwitch(
                     checked = !muted,
                     onCheckedChange = {
                         val toggledState = if (muted) MuteState.Never else MuteState.Always

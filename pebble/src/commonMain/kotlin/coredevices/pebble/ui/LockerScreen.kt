@@ -60,7 +60,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -262,7 +267,7 @@ class LockerViewModel(
 }
 
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LockerScreen(
     navBarNav: NavBarNav,
@@ -450,9 +455,35 @@ fun LockerScreen(
                         )
                     }
                 } else {
-                    PullToRefreshBox(isRefreshing = viewModel.storeIsRefreshing || viewModel.lockerIsRefreshing, onRefresh = {
-                        viewModel.startLockerRefresh(libPebble, sharedViewModel.watchType.value)
-                    }) {
+                    val isRefreshing = viewModel.storeIsRefreshing || viewModel.lockerIsRefreshing
+                    val pullRefreshState = rememberPullToRefreshState()
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        state = pullRefreshState,
+                        onRefresh = {
+                            viewModel.startLockerRefresh(libPebble, sharedViewModel.watchType.value)
+                        },
+                        indicator = {
+                            PullToRefreshDefaults.IndicatorBox(
+                                state = pullRefreshState,
+                                isRefreshing = isRefreshing,
+                                modifier = Modifier.align(Alignment.TopCenter),
+                            ) {
+                                if (isRefreshing) {
+                                    LoadingIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                } else {
+                                    LoadingIndicator(
+                                        progress = { pullRefreshState.distanceFraction.coerceIn(0f, 1f) },
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        },
+                    ) {
                         val active = when (viewModel.type.value) {
                             AppType.Watchface -> activeWatchface
                             AppType.Watchapp -> activeWatchapp
@@ -774,18 +805,24 @@ fun RowScope.CategoryItem(
             .padding(horizontal = 4.dp, vertical = 2.dp)
             .weight(1f),
     ) {
-        Icon(
-            imageVector = category.iconVector(),
-            contentDescription = null,
-            modifier = Modifier.size(ButtonDefaults.IconSize),
-        )
-        Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-        Text(
-            category.name,
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start,
+        ) {
+            Icon(
+                imageVector = category.iconVector(),
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize),
+            )
+            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+            Text(
+                category.name,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -821,7 +858,7 @@ fun SearchResultsList(
             // Composing the grid before the store results land would measure it with only the
             // locker entries, clamping any restored scroll position to the top.
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularWavyProgressIndicator()
+                LoadingIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
             }
         } else {
             LazyVerticalGrid(
@@ -864,7 +901,7 @@ fun SearchResultsList(
                 if (storeResults.loadState.append is LoadState.Loading) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularWavyProgressIndicator()
+                            LoadingIndicator(modifier = Modifier.size(36.dp), color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 } else if (storeResults.itemCount == 0 && hasUnfilteredStoreResults) {
@@ -923,7 +960,7 @@ fun SearchResultsList(
             if (isLoadingFirstPage) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularWavyProgressIndicator()
+                        LoadingIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
                     }
                 }
             } else {
@@ -953,7 +990,7 @@ fun SearchResultsList(
                 if (storeResults!!.loadState.append is LoadState.Loading) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularWavyProgressIndicator()
+                            LoadingIndicator(modifier = Modifier.size(36.dp), color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 } else if (storeResults.itemCount == 0 && hasUnfilteredStoreResults) {

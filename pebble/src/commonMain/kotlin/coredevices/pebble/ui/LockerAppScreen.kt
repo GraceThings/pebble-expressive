@@ -1,5 +1,13 @@
 package coredevices.pebble.ui
 
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.fillMaxSize
+
 import CommonRoutes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -50,6 +58,14 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonMenu
+import androidx.compose.material3.FloatingActionButtonMenuItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -194,7 +210,6 @@ private fun appstoreSourceFromId(id: Int?): AppstoreSource? {
 
 @Composable
 fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNav, storeId: String?, storeSourceId: Int?) {
-    Box(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
         val scope = rememberCoroutineScope()
         val libPebble = rememberLibPebble()
         val lastConnectedWatch = lastConnectedWatch()
@@ -222,6 +237,7 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
         val nativeLockerAddUtil: NativeLockerAddUtil = koinInject()
         var adding by remember { mutableStateOf(false) }
         var storeReview by remember { mutableStateOf<InstallReview?>(null) }
+        var fabMenuExpanded by remember { mutableStateOf(false) }
 
         fun reloadFromStore(useCache: Boolean) {
             if (storeId != null && storeSource != null) {
@@ -271,56 +287,309 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
             }
             topBarParams.title(entry?.type?.name ?: "")
         }
-        PullToRefreshBox(
-            isRefreshing = viewModel.loadingFromStore,
-            onRefresh = { reloadFromStore(useCache = false) },
-        ) {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 5.dp)
+        if (entry == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center,
             ) {
-                entry?.let { entry ->
-                    if (commonAppStore?.headerImageUrl != null) {
-                        AsyncImage(
-                            model = commonAppStore.headerImageUrl,
-                            contentDescription = "banner",
-                            modifier = Modifier.fillMaxWidth().padding(10.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.FillWidth,
-                        )
-                    }
-                    Row {
-                        AppImage(
-                            entry = entry,
-                            modifier = Modifier.padding(10.dp).clip(RoundedCornerShape(12.dp)),
-                            size = 140.dp,
-                        )
-                        Column(modifier = Modifier.padding(horizontal = 5.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (entry.type == AppType.Watchapp) {
-                                    AsyncImage(
-                                        model = entry.listImageUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(5.dp))
+                LoadingIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            return
+        }
+
+        fun addToWatch(granted: Map<String, Boolean?>) {
+            val storeApp = entry.commonAppType as? CommonAppType.Store ?: return
+            GlobalScope.launch {
+                val watch = lastConnectedWatch as? ConnectedPebbleDevice
+                viewModel.addedToLocker = true
+                val addResult = nativeLockerAddUtil.addAppToLocker(
+                    storeApp,
+                    storeApp.storeSource,
+                    granted,
+                )
+                if (!addResult) {
+                    topBarParams.showSnackbar("Failed to add app")
+                    adding = false
+                    return@launch
+                }
+                if (watch != null && entry.type != AppType.Plugin) {
+                    libPebble.launchApp(
+                        entry = entry,
+                        snackbarDisplay = topBarParams,
+                        connectedIdentifier = watch.identifier,
+                    )
+                }
+                adding = false
+            }
+        }
+
+        storeReview?.let { review ->
+            InstallReviewDialog(review) { granted ->
+                storeReview = null
+                if (granted != null) addToWatch(granted) else adding = false
+            }
+        }
+
+        val connectedIdentifier = lastConnectedWatch?.identifier
+        val showStartApp = entry.isCompatible && entry.commonAppType.canStartApp() && !appIsRunning
+                && !viewModel.addedToLocker && entry.type != AppType.Plugin
+        val isStoreApp = entry.commonAppType is CommonAppType.Store && !viewModel.addedToLocker
+        val canMoveToTop = entry.commonAppType is CommonAppTypeLocal && entry.commonAppType.order > 0
+        val hasSettings = entry.hasSettings()
+        val settingsEnabled = remember(entry, connected) {
+            entry.type == AppType.Plugin ||
+                entry.isCompatible && entry.isSynced() && (connected || entry.commonAppType is CommonAppType.System)
+        }
+
+        val actions = remember(
+            isStoreApp,
+            showStartApp,
+            hasSettings,
+            canMoveToTop,
+            adding,
+            connected,
+            loadingToWatch,
+            settingsEnabled,
+            entry,
+            connectedIdentifier,
+        ) {
+            buildList {
+                if (isStoreApp) {
+                    val addText = if (entry.type == AppType.Plugin) "Add" else "Add To Watch"
+                    add(
+                        LockerAppAction(
+                            label = addText,
+                            icon = Icons.Default.Add,
+                            enabled = !adding,
+                            onClick = {
+                                adding = true
+                                scope.launch {
+                                    val storeApp = entry.commonAppType as CommonAppType.Store
+                                    val review = nativeLockerAddUtil.review(storeApp)
+                                    if (review == null) addToWatch(emptyMap()) else storeReview = review
                                 }
-                                Text(
-                                    text = entry.title,
-                                    fontSize = 22.sp,
-                                    modifier = Modifier.padding(vertical = 5.dp),
+                            }
+                        )
+                    )
+                }
+                if (showStartApp) {
+                    val startText = if (entry.type == AppType.Watchapp) "Start App" else "Start Watchface"
+                    add(
+                        LockerAppAction(
+                            label = startText,
+                            icon = Icons.Default.PlayCircle,
+                            enabled = connected && !loadingToWatch,
+                            onClick = {
+                                GlobalScope.launch {
+                                    if (connectedIdentifier != null) {
+                                        loadingToWatch = true
+                                        libPebble.launchApp(entry, topBarParams, connectedIdentifier)
+                                        loadingToWatch = false
+                                    }
+                                }
+                            }
+                        )
+                    )
+                }
+                if (hasSettings) {
+                    add(
+                        LockerAppAction(
+                            label = "Settings",
+                            icon = Icons.Default.Settings,
+                            enabled = settingsEnabled,
+                            onClick = {
+                                scope.launch {
+                                    entry.showSettings(navBarNav, libPebble, topBarParams)
+                                }
+                            }
+                        )
+                    )
+                }
+                if (canMoveToTop) {
+                    add(
+                        LockerAppAction(
+                            label = "Move To Top",
+                            icon = Icons.Default.VerticalAlignTop,
+                            enabled = true,
+                            onClick = {
+                                scope.launch { libPebble.setAppOrder(entry.uuid, -1) }
+                            }
+                        )
+                    )
+                }
+            }
+        }
+
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            floatingActionButton = {
+                if (actions.size == 1) {
+                    val action = actions.first()
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            if (action.enabled) {
+                                action.onClick()
+                            } else if (!connected && (action.label.contains("Start", ignoreCase = true) || action.label == "Settings")) {
+                                topBarParams.showSnackbar("No watch connected")
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = action.icon,
+                                contentDescription = action.label,
+                            )
+                        },
+                        text = {
+                            Text(action.label)
+                        },
+                    )
+                } else if (actions.size > 1) {
+                    FloatingActionButtonMenu(
+                        expanded = fabMenuExpanded,
+                        button = {
+                            ToggleFloatingActionButton(
+                                checked = fabMenuExpanded,
+                                onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
+                            ) {
+                                Icon(
+                                    imageVector = if (fabMenuExpanded) Icons.Filled.Close else Icons.Filled.MoreVert,
+                                    contentDescription = if (fabMenuExpanded) "Close actions menu" else "App actions menu",
                                 )
                             }
-                            val hearts = if (viewModel.hearts != null) {
-                                viewModel.hearts
+                        },
+                    ) {
+                        actions.forEach { action ->
+                            FloatingActionButtonMenuItem(
+                                onClick = {
+                                    if (!action.enabled) {
+                                        if (!connected) {
+                                            topBarParams.showSnackbar("No watch connected")
+                                        }
+                                        return@FloatingActionButtonMenuItem
+                                    }
+                                    fabMenuExpanded = false
+                                    action.onClick()
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = action.icon,
+                                        contentDescription = action.label,
+                                        tint = if (action.enabled) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        },
+                                    )
+                                },
+                                text = {
+                                    Text(
+                                        text = action.label,
+                                        color = if (action.enabled) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        },
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+            },
+        ) { innerPadding ->
+            PullToRefreshBox(
+                isRefreshing = viewModel.loadingFromStore,
+                onRefresh = { reloadFromStore(useCache = false) },
+                modifier = Modifier.padding(innerPadding),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 96.dp)
+                ) {
+                if (commonAppStore?.headerImageUrl != null) {
+                    AsyncImage(
+                        model = commonAppStore.headerImageUrl,
+                        contentDescription = "banner",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.FillWidth,
+                    )
+                }
+
+                // Header Card
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            tonalElevation = 2.dp,
+                            modifier = Modifier.size(if (entry.type == AppType.Watchface) 120.dp else 84.dp),
+                        ) {
+                            if (entry.type == AppType.Watchface) {
+                                AppImage(
+                                    entry = entry,
+                                    modifier = Modifier.fillMaxSize(),
+                                    size = 120.dp,
+                                )
                             } else {
-                                entry.hearts
+                                val appIcon = entry.listImageUrl ?: entry.screenshotImageUrl
+                                if (appIcon != null) {
+                                    AsyncImage(
+                                        model = appIcon,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize().padding(10.dp),
+                                        contentScale = ContentScale.Fit,
+                                    )
+                                } else {
+                                    AppImage(
+                                        entry = entry,
+                                        modifier = Modifier.fillMaxSize(),
+                                        size = 84.dp,
+                                    )
+                                }
                             }
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = entry.title,
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+
+                            // Heart & Category Row
+                            val hearts = if (viewModel.hearts != null) viewModel.hearts else entry.hearts
                             val isHearted = entry.isHearted()
-                            if (hearts != null && isHearted != null) {
-                                Row(
-                                    modifier = Modifier.padding(vertical = 5.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                if (hearts != null && isHearted != null) {
                                     val service = remember(entry) { viewModel.serviceFor(entry) }
                                     val loggedInForHearts = remember(entry) { service.isLoggedIn() }
                                     val addUrl = commonAppStore?.addHeartUrl
@@ -328,43 +597,31 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                                     var isChanging by remember { mutableStateOf(false) }
                                     val canAddAndRemove =
                                         loggedInForHearts && addUrl != null && removeUrl != null && entry.storeId != null && !isChanging
-                                    val icon = remember(entry, isHearted) {
-                                        when {
-                                            isHearted -> Icons.Outlined.Favorite
-                                            else -> Icons.Outlined.FavoriteBorder
-                                        }
-                                    }
-                                    IconButton(
-                                        onClick = {
-                                            if (entry.storeId == null) {
-                                                return@IconButton
-                                            }
+                                    val icon = if (isHearted) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder
+
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isHearted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        modifier = Modifier.clickable(enabled = canAddAndRemove) {
+                                            if (entry.storeId == null) return@clickable
                                             scope.launch {
                                                 if (canAddAndRemove) {
                                                     if (!isHearted) {
                                                         isChanging = true
-                                                        val result =
-                                                            service.addHeart(addUrl, entry.storeId)
+                                                        val result = service.addHeart(addUrl, entry.storeId)
                                                         isChanging = false
                                                         if (result) {
-                                                            viewModel.hearts?.let {
-                                                                viewModel.hearts = it + 1
-                                                            }
+                                                            viewModel.hearts?.let { viewModel.hearts = it + 1 }
                                                             reloadFromStore(useCache = false)
                                                         } else {
                                                             topBarParams.showSnackbar("Failed to heart app")
                                                         }
                                                     } else {
                                                         isChanging = true
-                                                        val result = service.removeHeart(
-                                                            removeUrl,
-                                                            entry.storeId
-                                                        )
+                                                        val result = service.removeHeart(removeUrl, entry.storeId)
                                                         isChanging = false
                                                         if (result) {
-                                                            viewModel.hearts?.let {
-                                                                viewModel.hearts = it - 1
-                                                            }
+                                                            viewModel.hearts?.let { viewModel.hearts = it - 1 }
                                                             reloadFromStore(useCache = false)
                                                         } else {
                                                             topBarParams.showSnackbar("Failed to remove heart")
@@ -373,31 +630,32 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                                                 }
                                             }
                                         },
-                                        modifier = Modifier.animateContentSize(),
-                                        enabled = canAddAndRemove,
                                     ) {
-                                        Icon(
-                                            icon,
-                                            contentDescription = "Hearts",
-                                            tint = if (isHearted) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                LocalContentColor.current
-                                            },
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = "Hearts",
+                                                tint = if (isHearted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "$hearts",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = if (isHearted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
-                                    Text(
-                                        text = "$hearts",
-                                        modifier = Modifier.padding(start = 5.dp),
-                                    )
                                 }
-                            }
-                            if (entry.type == AppType.Watchapp) {
-                                entry.category?.let {
-                                    Spacer(Modifier.height(5.dp))
-                                    FilterChip(
-                                        true,
-                                        onClick = {
+
+                                if (entry.type == AppType.Watchapp && entry.category != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                        modifier = Modifier.clickable {
                                             if (entry.categorySlug != null && storeSource != null) {
                                                 navBarNav.navigateTo(
                                                     PebbleNavBarRoutes.AppStoreCollectionRoute(
@@ -408,20 +666,22 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                                                 )
                                             }
                                         },
-                                        label = { Text(entry.category) }
-                                    )
+                                    ) {
+                                        Text(
+                                            text = entry.category,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        )
+                                    }
                                 }
                             }
-                            Spacer(Modifier.height(5.dp))
+
                             val watchName = lastConnectedWatch?.displayName() ?: ""
                             val onWatchText = if (entry.type == AppType.Plugin) {
-                                null // Plugins run on the phone; they're never on the watch.
+                                null
                             } else if (entry.isCompatible && entry.isSynced()) {
-                                if (appIsRunning) {
-                                    "Running On Watch $watchName"
-                                } else {
-                                    "On Watch $watchName"
-                                }
+                                if (appIsRunning) "Running On Watch $watchName" else "On Watch $watchName"
                             } else if (!entry.isCompatible) {
                                 "Not Compatible with $watchName"
                             } else if (entry.commonAppType !is CommonAppType.Store) {
@@ -429,436 +689,336 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                             } else {
                                 null
                             }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                entry.CompatibilityWarning(topBarParams)
-                                if (onWatchText != null) {
+                            if (onWatchText != null) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    entry.CompatibilityWarning(topBarParams)
                                     Text(
-                                        onWatchText,
+                                        text = onWatchText,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                                         color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(vertical = 5.dp),
                                     )
                                 }
                             }
                         }
                     }
+                }
 
-                    val connectedIdentifier = lastConnectedWatch?.identifier
-                    val showStartApp =
-                        entry.isCompatible && entry.commonAppType.canStartApp() && !appIsRunning
-                                && !viewModel.addedToLocker && entry.type != AppType.Plugin
-                    if (showStartApp) {
-                        val text = if (entry.type == AppType.Watchapp) {
-                            "Start App"
-                        } else {
-                            "Start Watchface"
-                        }
-                        PebbleElevatedButton(
-                            text = text,
-                            onClick = {
-                                // Global scope because it could take a second to download/sync/load app
-                                GlobalScope.launch {
-                                    if (connectedIdentifier != null) {
-                                        loadingToWatch = true
-                                        libPebble.launchApp(
-                                            entry,
-                                            topBarParams,
-                                            connectedIdentifier
-                                        )
-                                        loadingToWatch = false
-                                    }
-                                }
-                            },
-                            enabled = connected && !loadingToWatch,
-                            icon = Icons.Default.PlayCircle,
-                            contentDescription = text,
-                            primaryColor = true,
-                            modifier = Modifier.padding(5.dp),
+                if (commonAppStore?.settingsPageState == SettingsPageState.PageDoesntLoad) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Text(
+                            text = "This app's settings page may not work any more",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(16.dp)
                         )
                     }
-                    if (entry.commonAppType is CommonAppType.Store && !viewModel.addedToLocker) {
-//                    val hasUuidConflict = remember(viewModel.storeEntries) { // One store has multiple entries with same uuid
-//                        viewModel.storeEntries?.let {
-//                            it.distinctBy { it.source.url }.size < it.size
-//                        } ?: false
-//                    }
-//                    var variantsExpanded by remember { mutableStateOf(false) }
-                        Row(
-                            Modifier.padding(5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val storeApp = entry.commonAppType
-                            fun addToWatch(granted: Map<String, Boolean?>) {
-                                // Global scope because it could take a second to download/sync/load app
-                                GlobalScope.launch {
-                                    val watch = lastConnectedWatch as? ConnectedPebbleDevice
-                                    viewModel.addedToLocker = true
-                                    val addResult = nativeLockerAddUtil.addAppToLocker(
-                                        storeApp,
-                                        storeApp.storeSource,
-                                        granted,
-                                    )
-                                    if (!addResult) {
-                                        topBarParams.showSnackbar("Failed to add app")
-                                        return@launch
-                                    }
-                                    // A plugin-only app runs on the phone: nothing to sync or open on the watch.
-                                    if (watch != null && entry.type != AppType.Plugin) {
-                                        libPebble.launchApp(
-                                            entry = entry,
-                                            snackbarDisplay = topBarParams,
-                                            connectedIdentifier = watch.identifier,
-                                        )
-                                    }
-                                }
-                            }
-                            storeReview?.let { review ->
-                                InstallReviewDialog(review) { granted ->
-                                    storeReview = null
-                                    if (granted != null) addToWatch(granted) else adding = false
-                                }
-                            }
-                            val addText = if (entry.type == AppType.Plugin) "Add" else "Add To Watch"
-                            PebbleElevatedButton(
-                                text = addText,
-                                onClick = {
-                                    adding = true
-                                    scope.launch {
-                                        val review = nativeLockerAddUtil.review(storeApp)
-                                        if (review == null) addToWatch(emptyMap()) else storeReview = review
-                                    }
-                                },
-                                enabled = !adding,
-                                icon = Icons.Default.Add,
-                                contentDescription = addText,
-                                primaryColor = true,
-                                modifier = Modifier.padding(end = 8.dp),
-                            )
-//                        if (viewModel.storeEntries != null && (viewModel.storeEntries?.size ?: 1) > 1) {
-//                            ExposedDropdownMenuBox(
-//                                expanded = variantsExpanded,
-//                                onExpandedChange = { variantsExpanded = it },
-//                                modifier = Modifier.weight(1f)
-//                            ) {
-//                                val version = entry.version?.let { "v$it" } ?: "Unknown version"
-//                                val textContent = if (hasUuidConflict) {
-//                                    "${entry.commonAppType.storeSource.title}: ${entry.title} ($version)"
-//                                } else {
-//                                    "${entry.commonAppType.storeSource.title} ($version)"
-//                                }
-//                                TextField(
-//                                    value = textContent,
-//                                    onValueChange = { },
-//                                    readOnly = true,
-//                                    singleLine = true,
-//                                    trailingIcon = {
-//                                        ExposedDropdownMenuDefaults.TrailingIcon(
-//                                            expanded = variantsExpanded
-//                                        )
-//                                    },
-//                                    modifier = Modifier
-//                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-//                                )
-//                                ExposedDropdownMenu(
-//                                    expanded = variantsExpanded,
-//                                    onDismissRequest = { variantsExpanded = false }
-//                                ) {
-//                                    logger.d { "Showing ${viewModel.storeEntries!!.size} variants in dropdown" }
-//                                    viewModel.storeEntries!!.forEach { variant ->
-//                                        DropdownMenuItem(
-//                                            text = {
-//                                                if (hasUuidConflict) {
-//                                                    Text("${variant.source.title}: ${variant.app.title} (${variant.app.version?.let { "v$it" } ?: "Unknown version"})")
-//                                                } else {
-//                                                    Text("${variant.source.title} (${variant.app.version?.let { "v$it" } ?: "Unknown version"})")
-//                                                }
-//                                            },
-//                                            onClick = {
-//                                                viewModel.selectedStoreEntry = variant.app
-//                                                variantsExpanded = false
-//                                            }
-//                                        )
-//                                    }
-//                                }
-//                            }
-//                        }
-                        }
-                    }
+                }
 
-                    Row {
-                        entry.SettingsButton(
-                            navBarNav = navBarNav,
-                            topBarParams = topBarParams,
-                            connected = connected,
+                val screenshotsToDisplay = remember(storeEntry) {
+                    when (storeEntry?.commonAppType) {
+                        is CommonAppType.Store -> storeEntry.commonAppType.allScreenshotUrls.drop(1)
+                        else -> emptyList()
+                    }
+                }
+
+                if (screenshotsToDisplay.isNotEmpty()) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                        Text(
+                            text = "Screenshots",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
-                        if (entry.commonAppType is CommonAppTypeLocal && entry.commonAppType.order > 0) {
-                            PebbleElevatedButton(
-                                text = "Move To Top",
-                                onClick = {
-                                    scope.launch {
-                                        libPebble.setAppOrder(entry.uuid, -1)
-                                    }
-                                },
-                                icon = Icons.Default.VerticalAlignTop,
-                                contentDescription = "Move To Top",
-                                primaryColor = false,
-                                modifier = Modifier.padding(5.dp),
-                            )
-                        }
-                    }
-                    if (commonAppStore?.settingsPageState == SettingsPageState.PageDoesntLoad) {
-                        Row {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
-                                )
-                            ) {
-                                Text(
-                                    text = "This app's settings page may not work any more",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    modifier = Modifier.padding(15.dp)
-                                )
-                            }
-                        }
-                    }
-                    val screenshotsToDisplay = remember(storeEntry) {
-                        when (storeEntry?.commonAppType) {
-                            is CommonAppType.Store -> {
-//                            when (entry.type) {
-//                                AppType.Watchface -> entry.commonAppType.allScreenshotUrls.drop(1)
-//                                AppType.Watchapp -> entry.commonAppType.allScreenshotUrls
-//                            }
-                                storeEntry.commonAppType.allScreenshotUrls.drop(1)
-                            }
-
-                            else -> emptyList()
-                        }
-                    }
-                    if (screenshotsToDisplay.isNotEmpty()) {
                         LazyRow(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .wrapContentHeight()
-                                .padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                            contentPadding = PaddingValues(horizontal = 5.dp),
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp),
                         ) {
                             items(screenshotsToDisplay, key = { it }) { screenshotUrl ->
-                                AsyncImage(
-                                    model = screenshotUrl,
-                                    contentDescription = "Screenshot",
-                                    modifier = Modifier.size(110.dp).clip(RoundedCornerShape(7.dp)),
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    tonalElevation = 2.dp,
+                                    modifier = Modifier.size(130.dp),
+                                ) {
+                                    AsyncImage(
+                                        model = screenshotUrl,
+                                        contentDescription = "Screenshot",
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                                        contentScale = ContentScale.Fit,
+                                    )
+                                }
                             }
                         }
                     }
-                    val pluginsEnabled = libPebble.config.collectAsState().value.watchConfig.enablePlugins
-                    val storeApp = (entry.commonAppType as? CommonAppType.Store)?.storeApp
-                    if (entry.commonAppType is CommonAppType.Locker) {
+                }
+
+                val pluginsEnabled = libPebble.config.collectAsState().value.watchConfig.enablePlugins
+                val storeAppObj = (entry.commonAppType as? CommonAppType.Store)?.storeApp
+                if (entry.commonAppType is CommonAppType.Locker) {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                         AppPermissionsSection(entry.uuid)
-                    } else if (pluginsEnabled && storeApp != null) {
-                        StorePermissionsSection(storeApp.requestedPermissions())
-                    } else if (storeEntry?.capabilities?.isNotEmpty() == true) {
-                        FlowRow(modifier = Modifier.padding(5.dp)) {
-                            storeEntry.capabilities.forEach { permission ->
-                                PermissionItem(permission, topBarParams)
-                            }
+                    }
+                } else if (pluginsEnabled && storeAppObj != null) {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        StorePermissionsSection(storeAppObj.requestedPermissions())
+                    }
+                } else if (storeEntry?.capabilities?.isNotEmpty() == true) {
+                    FlowRow(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        storeEntry.capabilities.forEach { permission ->
+                            PermissionItem(permission, topBarParams)
                         }
                     }
-                    Spacer(Modifier.height(5.dp))
-                    // Shared minimum width for the name column — grows to fit the widest label.
-                    var propertyNameWidthPx by remember { mutableIntStateOf(0) }
-                    val density = LocalDensity.current
-                    val propertyNameModifier = Modifier
-                        .widthIn(min = with(density) { propertyNameWidthPx.toDp() })
-                        .onSizeChanged {
-                            propertyNameWidthPx = maxOf(propertyNameWidthPx, it.width)
-                        }
-                    if (platform == Platform.Android && entry.androidCompanion != null) {
-                        PropertyRow(
-                            name = "COMPANION",
-                            nameModifier = propertyNameModifier,
-                            value = entry.androidCompanion.name,
-                            onClick = entry.androidCompanion.url?.let { url ->
-                                { urlLauncher.open(url); Unit }
-                            },
-                        )
-                    }
-                    val description = viewModel.selectedStoreEntry?.description ?: entry.description
-                    if (description != null && description.isNotBlank()) {
-                        PropertyRow(
-                            name = "DESCRIPTION",
-                            nameModifier = propertyNameModifier,
-                            value = description,
-                            multiRow = true,
-                        )
-                    }
+                }
 
-                    PropertyRow(
-                        name = "DEVELOPER",
-                        nameModifier = propertyNameModifier,
-                        value = entry.developerName,
-                        onClick = if (entry.developerId != null && storeSource != null) {
-                            {
-                                val developerId = entry.developerId
-                                navBarNav.navigateTo(
-                                    PebbleNavBarRoutes.AppStoreCollectionRoute(
-                                        sourceId = storeSource.id,
-                                        path = "dev/$developerId",
-                                        title = "Developer: ${entry.developerName}"
+                // Metadata Card
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        if (platform == Platform.Android && entry.androidCompanion != null) {
+                            M3EPropertyRow(
+                                name = "COMPANION",
+                                value = entry.androidCompanion.name,
+                                onClick = entry.androidCompanion.url?.let { url ->
+                                    { urlLauncher.open(url); Unit }
+                                },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        }
+
+                        val description = viewModel.selectedStoreEntry?.description ?: entry.description
+                        if (description != null && description.isNotBlank()) {
+                            M3EPropertyRow(
+                                name = "DESCRIPTION",
+                                value = description,
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        }
+
+                        M3EPropertyRow(
+                            name = "DEVELOPER",
+                            value = entry.developerName,
+                            onClick = if (entry.developerId != null && storeSource != null) {
+                                {
+                                    val developerId = entry.developerId
+                                    navBarNav.navigateTo(
+                                        PebbleNavBarRoutes.AppStoreCollectionRoute(
+                                            sourceId = storeSource.id,
+                                            path = "dev/$developerId",
+                                            title = "Developer: ${entry.developerName}"
+                                        )
                                     )
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                        onClickIcon = Icons.AutoMirrored.Default.ArrowForward,
-                    )
-                    entry.version?.let { version ->
-                        val sideloadedText =
-                            if (entry.commonAppType is CommonAppType.Locker && entry.commonAppType.sideloaded) {
-                                " (sideloaded)"
+                                }
                             } else {
-                                ""
-                            }
-                        val updatedDateText = if (commonAppStore?.publishedDate != null) {
-                            " - ${
-                                PUBLISHED_DATE_FORMAT.format(
-                                    commonAppStore.publishedDate
-                                        .toLocalDateTime(TimeZone.currentSystemDefault())
-                                ).uppercase()
-                            }"
-                        } else {
-                            ""
-                        }
-                        PropertyRow(
-                            name = "VERSION",
-                            nameModifier = propertyNameModifier,
-                            value = "$version$sideloadedText$updatedDateText"
-                        )
-                    }
-                    (viewModel.selectedStoreEntry?.sourceLink ?: entry.sourceLink)?.let { sourceLink ->
-                        if (sourceLink.isNotEmpty()) {
-                            PropertyRow(
-                                name = "SOURCE CODE",
-                                nameModifier = propertyNameModifier,
-                                value = "External Link",
-                                onClick = { urlLauncher.open(sourceLink) }
-                            )
-                        }
-                    }
-
-                    commonAppStore?.developerLink?.let { developerLink ->
-                        if (developerLink.isNotEmpty()) {
-                            PropertyRow(
-                                name = "WEBSITE LINK",
-                                nameModifier = propertyNameModifier,
-                                value = "External Link",
-                                onClick = { urlLauncher.open(developerLink) }
-                            )
-                        }
-                    }
-                    val contactStoreId = entry.storeId
-                    if (
-                        commonAppStore?.contactable == true &&
-                        commonAppStore.storeSource.isPebbleFeed() &&
-                        contactStoreId != null
-                    ) {
-                        PropertyRow(
-                            name = "CONTACT DEVELOPER",
-                            nameModifier = propertyNameModifier,
-                            value = "Send Message",
-                            onClick = {
-                                navBarNav.navigateTo(
-                                    PebbleRoutes.ContactDeveloperRoute(
-                                        appId = contactStoreId,
-                                        appTitle = entry.title,
-                                    )
-                                )
+                                null
                             },
                             onClickIcon = Icons.AutoMirrored.Default.ArrowForward,
                         )
-                    }
-                    commonAppStore?.changelog?.let { changelog ->
-                        if (changelog.isNotEmpty()) {
-                            val show = remember { mutableStateOf(false) }
-                            PropertyRow(
-                                name = "CHANGELOG",
-                                nameModifier = propertyNameModifier,
-                                value = "View",
-                                onClick = { show.value = true },
-                                onClickIcon = Icons.AutoMirrored.Default.ArrowForward,
+
+                        entry.version?.let { version ->
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            val sideloadedText =
+                                if (entry.commonAppType is CommonAppType.Locker && entry.commonAppType.sideloaded) {
+                                    " (sideloaded)"
+                                } else {
+                                    ""
+                                }
+                            val updatedDateText = if (commonAppStore?.publishedDate != null) {
+                                " - ${
+                                    PUBLISHED_DATE_FORMAT.format(
+                                        commonAppStore.publishedDate
+                                            .toLocalDateTime(TimeZone.currentSystemDefault())
+                                    ).uppercase()
+                                }"
+                            } else {
+                                ""
+                            }
+                            M3EPropertyRow(
+                                name = "VERSION",
+                                value = "$version$sideloadedText$updatedDateText"
                             )
-                            if (show.value) {
-                                AlertDialog(
-                                    onDismissRequest = {
-                                        show.value = false
-                                    },
-                                    title = { Text("Changelog") },
-                                    text = {
-                                        LazyColumn {
-                                            items(changelog) { item ->
-                                                Row(modifier = Modifier.padding(5.dp)) {
-                                                    Text(
-                                                        item.version ?: "Unknown version",
-                                                        fontSize = 20.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Spacer(modifier = Modifier.weight(1f))
-                                                    val date = remember(item.publishedDate) {
-                                                        item.publishedDate?.let {
-                                                            PUBLISHED_DATE_FORMAT.format(
-                                                                it.toLocalDateTime(TimeZone.currentSystemDefault())
-                                                            ).uppercase()
-                                                        } ?: ""
-                                                    }
-                                                    Text(
-                                                        date,
-                                                        fontSize = 20.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                                Text(
-                                                    item.releaseNotes ?: "\n",
-                                                    modifier = Modifier.padding(5.dp)
-                                                )
-                                            }
-                                        }
-                                    },
-                                    confirmButton = {
-                                        TextButton(onClick = {
-                                            show.value = false
-                                        }) { Text("Dismiss") }
-                                    }
+                        }
+
+                        (viewModel.selectedStoreEntry?.sourceLink ?: entry.sourceLink)?.let { sourceLink ->
+                            if (sourceLink.isNotEmpty()) {
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                M3EPropertyRow(
+                                    name = "SOURCE CODE",
+                                    value = "External Link",
+                                    onClick = { urlLauncher.open(sourceLink) }
                                 )
                             }
                         }
-                    }
 
-                    storeSource?.let { storeSource ->
-                        val storeId = entry.storeId
-                        val onClick = if (storeId != null && entry.appstoreSource?.url == PEBBLE_FEED_URL) {
-                            {
-                                urlLauncher.open("https://apps.repebble.com/$storeId")
-                                Unit
+                        commonAppStore?.developerLink?.let { developerLink ->
+                            if (developerLink.isNotEmpty()) {
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                M3EPropertyRow(
+                                    name = "WEBSITE LINK",
+                                    value = "External Link",
+                                    onClick = { urlLauncher.open(developerLink) }
+                                )
                             }
-                        } else {
-                            null
                         }
-                        PropertyRow(
-                            name = "STORE",
-                            nameModifier = propertyNameModifier,
-                            value = storeSource.title,
-                            onClick = onClick,
-                        )
+
+                        val contactStoreId = entry.storeId
+                        if (
+                            commonAppStore?.contactable == true &&
+                            commonAppStore.storeSource.isPebbleFeed() &&
+                            contactStoreId != null
+                        ) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            M3EPropertyRow(
+                                name = "CONTACT DEVELOPER",
+                                value = "Send Message",
+                                onClick = {
+                                    navBarNav.navigateTo(
+                                        PebbleRoutes.ContactDeveloperRoute(
+                                            appId = contactStoreId,
+                                            appTitle = entry.title,
+                                        )
+                                    )
+                                },
+                                onClickIcon = Icons.AutoMirrored.Default.ArrowForward,
+                            )
+                        }
+
+                        commonAppStore?.changelog?.let { changelog ->
+                            if (changelog.isNotEmpty()) {
+                                val show = remember { mutableStateOf(false) }
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                M3EPropertyRow(
+                                    name = "CHANGELOG",
+                                    value = "View Changelog",
+                                    onClick = { show.value = true },
+                                    onClickIcon = Icons.AutoMirrored.Default.ArrowForward,
+                                )
+                                if (show.value) {
+                                    AlertDialog(
+                                        onDismissRequest = {
+                                            show.value = false
+                                        },
+                                        title = { Text("Changelog") },
+                                        text = {
+                                            LazyColumn {
+                                                items(changelog) { item ->
+                                                    Row(modifier = Modifier.padding(5.dp)) {
+                                                        Text(
+                                                            item.version ?: "Unknown version",
+                                                            fontSize = 18.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                        Spacer(modifier = Modifier.weight(1f))
+                                                        val date = remember(item.publishedDate) {
+                                                            item.publishedDate?.let {
+                                                                PUBLISHED_DATE_FORMAT.format(
+                                                                    it.toLocalDateTime(TimeZone.currentSystemDefault())
+                                                                ).uppercase()
+                                                            } ?: ""
+                                                        }
+                                                        Text(
+                                                            date,
+                                                            fontSize = 14.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                    Text(
+                                                        item.releaseNotes ?: "\n",
+                                                        modifier = Modifier.padding(5.dp)
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        confirmButton = {
+                                            TextButton(onClick = {
+                                                show.value = false
+                                            }) { Text("Dismiss") }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        storeSource?.let { storeSource ->
+                            val storeId = entry.storeId
+                            val onClick = if (storeId != null && entry.appstoreSource?.url == PEBBLE_FEED_URL) {
+                                {
+                                    urlLauncher.open("https://apps.repebble.com/$storeId")
+                                    Unit
+                                }
+                            } else {
+                                null
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            M3EPropertyRow(
+                                name = "STORE",
+                                value = storeSource.title,
+                                onClick = onClick,
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun M3EPropertyRow(
+    name: String,
+    value: String,
+    onClick: (() -> Unit)? = null,
+    onClickIcon: ImageVector = Icons.AutoMirrored.Default.Launch,
+) {
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = if (onClick != null) {
+            Modifier.fillMaxWidth().clickable(onClick = onClick)
+        } else {
+            Modifier.fillMaxWidth()
+        },
+        overlineContent = {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
+        headlineContent = {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        trailingContent = if (onClick != null) {
+            {
+                Icon(
+                    imageVector = onClickIcon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        } else null,
+    )
 }
 
 fun UriHandler.open(url : String): Boolean {
@@ -1074,3 +1234,10 @@ private val PUBLISHED_DATE_FORMAT = LocalDateTime.Format {
     char(' ')
     year()
 }
+
+private data class LockerAppAction(
+    val label: String,
+    val icon: ImageVector,
+    val enabled: Boolean,
+    val onClick: () -> Unit,
+)

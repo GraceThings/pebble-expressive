@@ -2,6 +2,7 @@ package theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -218,12 +219,34 @@ fun AppTheme(
     content: @Composable() () -> Unit
 ) {
     val colorScheme = currentColorScheme()
+    val themeProvider: ThemeProvider = koinInject()
+    val dynamicColor by themeProvider.dynamicColor.collectAsState()
+    val selectedThemeColor by themeProvider.themeColor.collectAsState()
+    val platformScheme = getPlatformColorScheme(colorScheme, dynamicColor)
     val extendedColors = if (colorScheme.isDark) darkExtendedColors else lightExtendedColors
     setStatusBarTheme(colorScheme)
-    val materialColorScheme = when (colorScheme) {
-        CoreAppColorScheme.Light -> lightScheme
-        CoreAppColorScheme.Grey -> greyScheme
-        CoreAppColorScheme.Black -> blackScheme
+    val materialColorScheme = platformScheme ?: when (colorScheme) {
+        CoreAppColorScheme.Light -> lightScheme.copy(
+            primary = selectedThemeColor.color,
+            primaryContainer = selectedThemeColor.color,
+            secondary = selectedThemeColor.color,
+            secondaryContainer = selectedThemeColor.color.copy(alpha = 0.2f),
+            tertiary = selectedThemeColor.color,
+        )
+        CoreAppColorScheme.Grey -> greyScheme.copy(
+            primary = selectedThemeColor.color,
+            primaryContainer = selectedThemeColor.color,
+            secondary = selectedThemeColor.color,
+            secondaryContainer = selectedThemeColor.color.copy(alpha = 0.25f),
+            tertiary = selectedThemeColor.color,
+        )
+        CoreAppColorScheme.Black -> blackScheme.copy(
+            primary = selectedThemeColor.color,
+            primaryContainer = selectedThemeColor.color,
+            secondary = selectedThemeColor.color,
+            secondaryContainer = selectedThemeColor.color.copy(alpha = 0.25f),
+            tertiary = selectedThemeColor.color,
+        )
     }
     CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
         MaterialTheme(
@@ -237,9 +260,45 @@ fun AppTheme(
 
 expect @Composable fun setStatusBarTheme(colorScheme: CoreAppColorScheme)
 
+expect fun isDynamicColorSupported(): Boolean
+expect @Composable fun getPlatformColorScheme(colorScheme: CoreAppColorScheme, dynamicColor: Boolean): ColorScheme?
+
+enum class CustomThemeColor(val displayName: String, val color: Color, val key: String) {
+    Orange("Pebble Orange", Color(0xFFFA4A36), "orange"),
+    Blue("Ocean Blue", Color(0xFF1976D2), "blue"),
+    Green("Forest Green", Color(0xFF2E7D32), "green"),
+    Purple("Royal Purple", Color(0xFF7B1FA2), "purple"),
+    Amber("Sunset Amber", Color(0xFFF57C00), "amber"),
+    Crimson("Crimson", Color(0xFFC2185B), "crimson"),
+    Teal("Teal", Color(0xFF00796B), "teal");
+
+    companion object {
+        fun fromKey(key: String?): CustomThemeColor =
+            entries.firstOrNull { it.key == key } ?: Orange
+    }
+}
+
+enum class AppFont(val displayName: String, val key: String) {
+    GoogleSans("Google Sans", "google_sans"),
+    UbuntuSans("Ubuntu Sans", "ubuntu_sans"),
+    Roboto("Roboto", "roboto"),
+    System("System Default", "system");
+
+    companion object {
+        fun fromKey(key: String?): AppFont =
+            entries.firstOrNull { it.key == key } ?: System
+    }
+}
+
 interface ThemeProvider {
     val theme: StateFlow<CoreAppTheme>
+    val dynamicColor: StateFlow<Boolean> get() = MutableStateFlow(false)
+    val themeColor: StateFlow<CustomThemeColor> get() = MutableStateFlow(CustomThemeColor.Orange)
+    val font: StateFlow<AppFont> get() = MutableStateFlow(AppFont.System)
     fun setTheme(theme: CoreAppTheme)
+    fun setDynamicColor(enabled: Boolean) {}
+    fun setThemeColor(color: CustomThemeColor) {}
+    fun setFont(font: AppFont) {}
 }
 
 class RealThemeProvider(
@@ -248,9 +307,32 @@ class RealThemeProvider(
     private val _theme = MutableStateFlow(getTheme())
     override val theme: StateFlow<CoreAppTheme> = _theme.asStateFlow()
 
+    private val _dynamicColor = MutableStateFlow(getDynamicColor())
+    override val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
+
+    private val _themeColor = MutableStateFlow(getThemeColor())
+    override val themeColor: StateFlow<CustomThemeColor> = _themeColor.asStateFlow()
+
+    private val _font = MutableStateFlow(getFont())
+    override val font: StateFlow<AppFont> = _font.asStateFlow()
+
     private fun getTheme(): CoreAppTheme {
         val key = settings.getStringOrNull(THEME_SETTINGS_KEY)
         return key.asCoreAppTheme()
+    }
+
+    private fun getDynamicColor(): Boolean {
+        return settings.getBoolean(DYNAMIC_COLOR_SETTINGS_KEY, false)
+    }
+
+    private fun getThemeColor(): CustomThemeColor {
+        val key = settings.getStringOrNull(THEME_COLOR_SETTINGS_KEY)
+        return CustomThemeColor.fromKey(key)
+    }
+
+    private fun getFont(): AppFont {
+        val key = settings.getStringOrNull(FONT_SETTINGS_KEY)
+        return AppFont.fromKey(key)
     }
 
     override fun setTheme(theme: CoreAppTheme) {
@@ -258,8 +340,26 @@ class RealThemeProvider(
         _theme.value = theme
     }
 
+    override fun setDynamicColor(enabled: Boolean) {
+        settings.putBoolean(DYNAMIC_COLOR_SETTINGS_KEY, enabled)
+        _dynamicColor.value = enabled
+    }
+
+    override fun setThemeColor(color: CustomThemeColor) {
+        settings.putString(THEME_COLOR_SETTINGS_KEY, color.key)
+        _themeColor.value = color
+    }
+
+    override fun setFont(font: AppFont) {
+        settings.putString(FONT_SETTINGS_KEY, font.key)
+        _font.value = font
+    }
+
     companion object {
         private const val THEME_SETTINGS_KEY = "current_theme"
+        private const val DYNAMIC_COLOR_SETTINGS_KEY = "dynamic_color"
+        private const val THEME_COLOR_SETTINGS_KEY = "theme_color"
+        private const val FONT_SETTINGS_KEY = "app_font"
     }
 }
 

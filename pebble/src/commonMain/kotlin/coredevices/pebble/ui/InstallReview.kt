@@ -35,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Switch
+import coredevices.pebble.custom.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -86,7 +87,7 @@ fun InstallReviewDialog(review: InstallReview, onAnswer: (Map<String, Boolean>?)
                         if (decision == null) {
                             UndecidedChoice { decisions[key] = it }
                         } else {
-                            Switch(checked = decision, onCheckedChange = { decisions[key] = it })
+                            ExpressiveSwitch(checked = decision, onCheckedChange = { decisions[key] = it })
                         }
                     }
                 }
@@ -305,7 +306,7 @@ fun AppPermissionsSection(appUuid: Uuid) {
             PermissionRow(row.permission, defined, note) {
                 when (row.status) {
                     PermissionStatus.Granted, PermissionStatus.Denied ->
-                        Switch(checked = row.status == PermissionStatus.Granted, onCheckedChange = decide)
+                        ExpressiveSwitch(checked = row.status == PermissionStatus.Granted, onCheckedChange = decide)
                     PermissionStatus.AllowedAutomatically, PermissionStatus.Waiting -> UndecidedChoice(decide)
                 }
             }

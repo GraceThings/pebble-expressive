@@ -32,6 +32,7 @@ class OtherPebbleAndroidApps(
             OtherPebbleApp(pkg = "io.rebble.cobble", name = "Cobble"),
             OtherPebbleApp(pkg = "nodomain.freeyourgadget.gadgetbridge", name = "Gadgetbridge"),
             OtherPebbleApp(pkg = "coredevices.coreapp", name = "CoreApp"),
+            OtherPebbleApp(pkg = "io.github.gracethings.pebbleexpressive", name = "Pebble Expressive"),
             OtherPebbleApp(pkg = "com.matejdro.micropebble", name = "microPebble"),
         )
     }

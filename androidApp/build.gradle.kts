@@ -54,7 +54,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "coredevices.coreapp"
+        applicationId = "io.github.gracethings.pebbleexpressive"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -30,6 +30,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -538,7 +541,7 @@ fun SelectVibePatternOrNone(
     onChangePattern: (VibePattern?) -> Unit,
     subtext: String? = null,
     title: String = "Vibration Pattern",
-    useSheet: Boolean = false,
+    useSheet: Boolean = true,
 ) {
     var showVibePatternChooser by remember { mutableStateOf(false) }
     if (showVibePatternChooser) {
@@ -568,27 +571,37 @@ fun SelectVibePatternOrNone(
     }
     ListItem(
         headlineContent = {
-            Text(title)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
         },
         supportingContent = {
             Column {
-                Text(currentPattern ?: "Default")
+                Text(
+                    text = currentPattern ?: "Default",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 if (subtext != null) {
-                    Text(subtext, fontSize = 12.sp)
+                    Text(
+                        text = subtext,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    )
                 }
             }
         },
         trailingContent = {
-            PebbleElevatedButton(
-                text = "Select",
-                onClick = {
-                    showVibePatternChooser = true
-                },
-                icon = Icons.Default.Vibration,
+            Icon(
+                imageVector = Icons.AutoMirrored.Default.ArrowForward,
                 contentDescription = "Select vibration pattern",
-                primaryColor = true,
-                modifier = Modifier.padding(8.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable {
+            showVibePatternChooser = true
         },
     )
 }

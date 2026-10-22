@@ -31,6 +31,10 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import coredevices.pebble.custom.ExpressiveListCard
+import coredevices.pebble.custom.ExpressiveListDivider
+import coredevices.pebble.custom.ExpressiveSwitch
+import coredevices.pebble.custom.ExpressiveToggleListItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -346,54 +351,54 @@ fun NotificationAppsScreen(topBarParams: TopBarParams, nav: NavBarNav, gotoDefau
                 Spacer(modifier = Modifier.height(8.dp))
             }
             LazyColumn(state = listState) {
-                item(key = "toggle_all") {
-                    ListItem(
-                        headlineContent = {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text("All Apps", fontSize = 17.sp)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    PebbleElevatedButton(
-                                        text = "Mute All",
-                                        onClick = {
-                                            libPebble.updateNotificationAppMuteState(
-                                                packageName = null,
-                                                muteState = MuteState.Always,
-                                            )
-                                        },
-                                        primaryColor = true,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    PebbleElevatedButton(
-                                        text = "Enable All",
-                                        onClick = {
-                                            libPebble.updateNotificationAppMuteState(
-                                                packageName = null,
-                                                muteState = MuteState.Never,
-                                            )
-                                        },
-                                        primaryColor = true,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
+                item(key = "global_controls_card") {
+                    ExpressiveListCard(modifier = Modifier.padding(bottom = 12.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                        ) {
+                            Text(
+                                text = "All Apps",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                PebbleElevatedButton(
+                                    text = "Mute All",
+                                    onClick = {
+                                        libPebble.updateNotificationAppMuteState(
+                                            packageName = null,
+                                            muteState = MuteState.Always,
+                                        )
+                                    },
+                                    primaryColor = true,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                PebbleElevatedButton(
+                                    text = "Enable All",
+                                    onClick = {
+                                        libPebble.updateNotificationAppMuteState(
+                                            packageName = null,
+                                            muteState = MuteState.Never,
+                                        )
+                                    },
+                                    primaryColor = true,
+                                    modifier = Modifier.weight(1f),
+                                )
                             }
-                        },
-                        shadowElevation = 2.dp,
-                    )
-                }
-                if (pebbleFeatures.supportsNotificationFiltering()) {
-                    item(key = "default_state") {
-                        ListItem(
-                            headlineContent = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("New app default", fontSize = 17.sp)
-                                }
-                            },
-                            trailingContent = {
-                                Switch(checked = libPebbleConfig.notificationConfig.defaultAppsToEnabled, onCheckedChange = { enabled ->
+                        }
+                        if (pebbleFeatures.supportsNotificationFiltering()) {
+                            ExpressiveListDivider()
+                            ExpressiveToggleListItem(
+                                headlineText = "New app default",
+                                supportingText = "Automatically enable notifications for newly installed apps",
+                                checked = libPebbleConfig.notificationConfig.defaultAppsToEnabled,
+                                onCheckedChange = { enabled ->
                                     libPebble.updateConfig(
                                         libPebbleConfig.copy(
                                             notificationConfig = libPebbleConfig.notificationConfig.copy(
@@ -401,10 +406,9 @@ fun NotificationAppsScreen(topBarParams: TopBarParams, nav: NavBarNav, gotoDefau
                                             )
                                         )
                                     )
-                                })
-                            },
-                            shadowElevation = 2.dp,
-                        )
+                                },
+                            )
+                        }
                     }
                 }
                 items(

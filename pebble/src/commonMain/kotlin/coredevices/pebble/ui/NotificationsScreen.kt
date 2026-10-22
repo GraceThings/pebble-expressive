@@ -19,7 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
+import coredevices.pebble.custom.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -204,7 +204,7 @@ fun NotificationAppCard(
                         modifier = Modifier.padding(start = 4.dp, end = 10.dp)
                     )
                 }
-                Switch(checked = !muted, onCheckedChange = {
+                ExpressiveSwitch(checked = !muted, onCheckedChange = {
                     val toggledState = if (muted) MuteState.Never else MuteState.Always
                     notificationApps.updateNotificationAppMuteState(app.packageName, toggledState)
                 })
