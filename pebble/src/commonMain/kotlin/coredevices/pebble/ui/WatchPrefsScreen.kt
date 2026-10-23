@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -19,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coredevices.pebble.rememberLibPebble
@@ -272,13 +276,22 @@ private fun schedulePref(
         section = pref.section(),
         item = {
             ListItem(
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 headlineContent = {
-                    Text(pref.displayName)
+                    Text(
+                        text = pref.displayName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 },
                 supportingContent = {
                     Column {
                         pref.description?.let { description ->
-                            Text(description, fontSize = 11.sp)
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         SelectTimeRange(
                             schedule = item.valueOrDefault(),
@@ -288,7 +301,6 @@ private fun schedulePref(
                         )
                     }
                 },
-                shadowElevation = 2.dp,
             )
         },
         isDebugSetting = pref.isDebugSetting,
@@ -364,13 +376,22 @@ private fun colorPref(item: WatchPreference<TimelineColor>, libPebble: LibPebble
         section = pref.section(),
         item = {
             ListItem(
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 headlineContent = {
-                    Text(pref.displayName)
+                    Text(
+                        text = pref.displayName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 },
                 supportingContent = {
                     Column {
                         pref.description?.let { description ->
-                            Text(description, fontSize = 11.sp)
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         SelectColorOrNone(
                             currentColorName = default.identifier,
@@ -382,7 +403,6 @@ private fun colorPref(item: WatchPreference<TimelineColor>, libPebble: LibPebble
                         )
                     }
                 },
-                shadowElevation = 2.dp,
             )
         },
         isDebugSetting = pref.isDebugSetting,
@@ -431,11 +451,22 @@ private fun rgbColorPref(item: WatchPreference<UInt>, libPebble: LibPebble): Set
         section = pref.section(),
         item = {
             ListItem(
-                headlineContent = { Text(pref.displayName) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                headlineContent = {
+                    Text(
+                        text = pref.displayName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
                 supportingContent = {
                     Column {
                         pref.description?.let { description ->
-                            Text(description, fontSize = 11.sp)
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         SelectRgbColor(
                             currentRgb = item.valueOrDefault(),

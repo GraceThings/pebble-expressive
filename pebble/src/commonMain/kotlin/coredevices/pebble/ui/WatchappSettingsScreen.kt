@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -22,7 +25,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
 import com.multiplatform.webview.request.RequestInterceptor
 import com.multiplatform.webview.request.WebRequest
@@ -85,6 +90,7 @@ internal expect fun rememberWebViewFileChooserParams(): PlatformWebViewParams?
 
 private val logger = Logger.withTag("WatchappSettingsScreen")
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WatchappSettingsScreen(
     coreNav: CoreNav,
@@ -100,7 +106,21 @@ fun WatchappSettingsScreen(
                 ?.let { libPebble.appConfigPageUrl(it) } ?: ""
         }
     }
-    val url = resolvedUrl?.let(::normalizeWatchappSettingsUrl) ?: return
+    val url = resolvedUrl?.let(::normalizeWatchappSettingsUrl)
+    if (url == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center,
+        ) {
+            LoadingIndicator(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        return
+    }
     DisposableEffect(uuid) {
         onDispose { WatchappSettingsUrlCache.remove(uuid) }
     }
@@ -204,14 +224,27 @@ fun WatchappSettingsScreen(
                 )
             }
         ) { paddingValues ->
-            webViewUuid?.let { uuid ->
-                WebView(
-                    state = state,
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    navigator = navigator,
-                    platformWebViewParams = fileChooserParams,
-                    factory = { webViewFactory(it, uuid, bridge) }
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center,
+            ) {
+                webViewUuid?.let { uuid ->
+                    WebView(
+                        state = state,
+                        modifier = Modifier.fillMaxSize(),
+                        navigator = navigator,
+                        platformWebViewParams = fileChooserParams,
+                        factory = { webViewFactory(it, uuid, bridge) }
+                    )
+                }
+                if (state.loadingState !is LoadingState.Finished) {
+                    LoadingIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
     }

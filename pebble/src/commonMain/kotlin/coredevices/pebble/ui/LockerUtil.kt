@@ -27,10 +27,12 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -45,6 +47,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -285,6 +288,7 @@ private fun LockerWrapper.load(watchType: WatchType): CommonApp? {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CommonApp.SettingsButton(
     navBarNav: NavBarNav,
@@ -294,6 +298,7 @@ fun CommonApp.SettingsButton(
     if (hasSettings()) {
         val libPebble = rememberLibPebble()
         val scope = rememberCoroutineScope()
+        var loadingSettings by remember { mutableStateOf(false) }
         val settingsEnabled =
             remember(
                 this,
@@ -307,15 +312,30 @@ fun CommonApp.SettingsButton(
         PebbleElevatedButton(
             text = "Settings",
             onClick = {
-                scope.launch {
-                    showSettings(navBarNav, libPebble, topBarParams)
+                if (!loadingSettings) {
+                    loadingSettings = true
+                    scope.launch {
+                        try {
+                            showSettings(navBarNav, libPebble, topBarParams)
+                        } finally {
+                            loadingSettings = false
+                        }
+                    }
                 }
             },
-            enabled = settingsEnabled,
+            enabled = settingsEnabled && !loadingSettings,
             icon = Icons.Default.Settings,
             contentDescription = "Settings",
             primaryColor = false,
             modifier = Modifier.padding(5.dp),
+            leadingContent = if (loadingSettings) {
+                {
+                    LoadingIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            } else null,
         )
     }
 }

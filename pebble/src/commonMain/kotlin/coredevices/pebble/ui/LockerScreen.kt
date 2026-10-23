@@ -53,6 +53,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -558,10 +559,14 @@ fun LockerScreen(
                                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                         Text(
                                             "Active",
-                                            fontSize = 24.sp,
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontSize = 20.sp,
+                                                fontWeight = FontWeight.Bold,
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             modifier = Modifier.padding(
-                                                top = 5.dp,
-                                                bottom = 8.dp
+                                                top = 8.dp,
+                                                bottom = 6.dp
                                             )
                                         )
                                         Spacer(modifier = Modifier.width(7.dp))
@@ -644,24 +649,43 @@ fun LockerScreen(
                                     contentType = "source_title",
                                     key = "source_${source.id}"
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            source.title,
-                                            modifier = Modifier.padding(
-                                                horizontal = 16.dp,
-                                                vertical = 16.dp
-                                            ).weight(1f),
-                                            style = MaterialTheme.typography.headlineMedium,
+                                    Column(
+                                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                                    ) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                         )
-                                        IconButton(
-                                            onClick = {
-                                                navBarNav.navigateTo(PebbleNavBarRoutes.AppstoreSettingsRoute())
-                                            },
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 2.dp)
                                         ) {
-                                            Icon(
-                                                Icons.Default.Tune,
-                                                contentDescription = "Configure Feeds"
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(4.dp)
+                                                    .height(24.dp)
+                                                    .clip(RoundedCornerShape(2.dp))
+                                                    .background(MaterialTheme.colorScheme.primary)
                                             )
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text(
+                                                source.title,
+                                                modifier = Modifier.weight(1f),
+                                                fontSize = 26.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                            IconButton(
+                                                onClick = {
+                                                    navBarNav.navigateTo(PebbleNavBarRoutes.AppstoreSettingsRoute())
+                                                },
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Tune,
+                                                    contentDescription = "Configure Feeds",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1024,18 +1048,38 @@ fun AppCarousel(
         return
     }
     Column {
-        Row(modifier = Modifier.padding(horizontal = 16.dp)
-            .let {
+        val isStoreCollection = highlightInLocker
+        Row(
+            modifier = Modifier
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = if (isStoreCollection) 14.dp else 8.dp,
+                    bottom = if (isStoreCollection) 4.dp else 8.dp,
+                )
+                .let {
+                    if (onClick != null) {
+                        it.clickable { onClick() }
+                    } else {
+                        it
+                    }
+                },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                title,
+                fontSize = if (isStoreCollection) 16.sp else 20.sp,
+                fontWeight = if (isStoreCollection) FontWeight.SemiBold else FontWeight.Bold,
+                color = if (isStoreCollection) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.width(6.dp))
             if (onClick != null) {
-                it.clickable { onClick() }
-            } else {
-                it
-            }
-        }, verticalAlignment = Alignment.CenterVertically) {
-            Text(title, fontSize = 24.sp, modifier = Modifier.padding(vertical = 8.dp))
-            Spacer(modifier = Modifier.width(7.dp))
-            if (onClick != null) {
-                Icon(Icons.AutoMirrored.Default.ArrowForward, contentDescription = "See all", modifier = Modifier)
+                Icon(
+                    Icons.AutoMirrored.Default.ArrowForward,
+                    contentDescription = "See all",
+                    modifier = Modifier.size(if (isStoreCollection) 18.dp else 20.dp),
+                    tint = if (isStoreCollection) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
         val carouselState = rememberCarouselState { items.size }
@@ -1177,7 +1221,9 @@ private fun BuiltInPluginCarousel(plugins: List<PluginMetadata>) {
     Column {
         Text(
             "Built-in Plugins",
-            fontSize = 24.sp,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
         val carouselState = rememberCarouselState { plugins.size }

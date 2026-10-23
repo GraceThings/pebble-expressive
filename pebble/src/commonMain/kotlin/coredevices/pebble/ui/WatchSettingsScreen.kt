@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -108,6 +109,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -228,29 +230,29 @@ enum class TopLevelType(val displayName: String) {
     }
 }
 
-enum class Section(val title: String, val icon: ImageVector) {
-    About("About", Icons.Default.Info),
-    Support("Get Help", Icons.Default.SupportAgent),
-    Defaults("Defaults", Icons.Default.Tune),
-    QuickLaunch("Quick Launch", Icons.Default.RocketLaunch), // watch only
-    NotificationsWatch("Notifications", Icons.Default.Notifications), // watch only
-    General("General", Icons.Default.Settings),
-    Apps("Apps", Icons.Default.Apps),
-    Battery("Battery", Icons.Default.BatteryFull),
-    Calendar("Calendar", Icons.Default.CalendarMonth),
-    Health("Health", Icons.AutoMirrored.Filled.DirectionsRun),
-    Speech("Speech Recognition", Icons.Default.Mic),
-    Display("Display", Icons.Default.DarkMode), // watch only
-    Weather("Weather", Icons.Default.Cloud),
-    Notifications("Notifications", Icons.Default.Notifications),
-    Time("Time", Icons.Default.Schedule), // watch only
-    Timeline("Timeline", Icons.Default.Timeline), // watch only
-    QuietTime("Quiet Time", Icons.Default.DoNotDisturb),
-    Connectivity("Connectivity", Icons.Default.Wifi),
-    Music("Music", Icons.Default.MusicNote),
-    Other("Other", Icons.Default.MoreHoriz), // watch only
-    Diagnostics("Diagnostics", Icons.Default.Timeline),
-    Debug("Debug", Icons.Default.BugReport),
+enum class Section(val title: String, val icon: ImageVector, val subtitle: String = "") {
+    About("About", Icons.Default.Info, "App version, permissions & changelogs"),
+    Support("Get Help", Icons.Default.SupportAgent, "Guides, troubleshooting & bug reports"),
+    Defaults("Defaults", Icons.Default.Tune, "Restore watch preferences to defaults"),
+    QuickLaunch("Quick Launch", Icons.Default.RocketLaunch, "Button shortcuts & long-press actions"), // watch only
+    NotificationsWatch("Notifications", Icons.Default.Notifications, "Watch alert filter, vibration & timeout"), // watch only
+    General("General", Icons.Default.Settings, "Theme, units, account & background sync"),
+    Apps("Apps", Icons.Default.Apps, "Store sources, updates & permissions"),
+    Battery("Battery", Icons.Default.BatteryFull, "Device battery level & cloud analytics"),
+    Calendar("Calendar", Icons.Default.CalendarMonth, "Timeline pins & synced calendars"),
+    Health("Health", Icons.AutoMirrored.Filled.DirectionsRun, "Steps, heart rate, sleep & profile"),
+    Speech("Speech Recognition", Icons.Default.Mic, "Voice models, language & dictation"),
+    Display("Display", Icons.Default.DarkMode, "Backlight, motion sensor & watch menu"), // watch only
+    Weather("Weather", Icons.Default.Cloud, "Locations, timeline pins & units"),
+    Notifications("Notifications", Icons.Default.Notifications, "Watch alerts, vibration & quick replies"),
+    Time("Time", Icons.Default.Schedule, "Timezone source & 24-hour clock format"), // watch only
+    Timeline("Timeline", Icons.Default.Timeline, "Quick View pins & timing"), // watch only
+    QuietTime("Quiet Time", Icons.Default.DoNotDisturb, "Do Not Disturb schedules & alerts"),
+    Connectivity("Connectivity", Icons.Default.Wifi, "Bluetooth, GATT & reconnection"),
+    Music("Music", Icons.Default.MusicNote, "Media playback & podcast controls"),
+    Other("Other", Icons.Default.MoreHoriz, "Standby mode & watch options"), // watch only
+    Diagnostics("Diagnostics", Icons.Default.Timeline, "Crash reports & diagnostic logs"),
+    Debug("Debug", Icons.Default.BugReport, "Developer tools & PKJS inspector"),
 }
 
 fun Section.navigatesDirectlyTo(): NavBarRoute? = when (this) {
@@ -598,11 +600,22 @@ fun rememberSettingsItemsState(navBarNav: NavBarNav?, snackbarDisplay: SnackbarD
                     topLevelType = TopLevelType.Phone,
                     section = Section.About,
                     item = {
-                        ListItem(
-                            headlineContent = {
-                                Text("App Version: ${appVersion.version}")
+                        ExpressiveListItem(
+                            headlineText = "App Version",
+                            supportingText = appVersion.version,
+                            trailingContent = {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f),
+                                ) {
+                                    Text(
+                                        text = appVersion.version,
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    )
+                                }
                             },
-                            shadowElevation = ELEVATION,
                         )
                     },
                     isDebugSetting = false,
@@ -1632,8 +1645,9 @@ fun rememberSettingsItemsState(navBarNav: NavBarNav?, snackbarDisplay: SnackbarD
                         } else {
                             Res.drawable.wispr_flow_logo_black
                         }
-                        ListItem(
-                            headlineContent = { Text("Cloud Recognition Provider") },
+                        ExpressiveListItem(
+                            headlineText = "Cloud Recognition Provider",
+                            supportingText = "Powered by Wispr Flow",
                             trailingContent = {
                                 Image(
                                     painter = painterResource(logo),
@@ -1641,7 +1655,6 @@ fun rememberSettingsItemsState(navBarNav: NavBarNav?, snackbarDisplay: SnackbarD
                                     modifier = Modifier.height(20.dp),
                                 )
                             },
-                            shadowElevation = ELEVATION,
                         )
                     }
                 ),
@@ -2266,10 +2279,12 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                 // Only show tab buttons at top if there is more than one
                 if (availableTopLevelTypes.size > 1) {
                     Box(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        SingleChoiceSegmentedButtonRow {
+                        SingleChoiceSegmentedButtonRow(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             availableTopLevelTypes.forEachIndexed { index, type ->
                                 SegmentedButton(
                                     shape = SegmentedButtonDefaults.itemShape(
@@ -2278,24 +2293,20 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                                     ),
                                     selected = viewModel.selectedTopLevelType == type,
                                     onClick = { viewModel.selectedTopLevelType = type },
-                                    icon = { },
-                                    label = {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(
-                                                type.icon(platform),
-                                                contentDescription = type.name,
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                            Text(
-                                                type.displayName,
-                                                fontSize = 10.sp,
-                                                lineHeight = 13.sp,
-                                                modifier = Modifier.padding(top = 3.dp).widthIn(min = 55.dp),
-                                                textAlign = TextAlign.Center,
-                                            )
-                                        }
+                                    icon = {
+                                        Icon(
+                                            type.icon(platform),
+                                            contentDescription = type.name,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     },
-                                    contentPadding = PaddingValues(horizontal = 5.dp, vertical = 8.dp)
+                                    label = {
+                                        Text(
+                                            type.displayName,
+                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                            maxLines = 1,
+                                        )
+                                    },
                                 )
                             }
                         }
@@ -2310,14 +2321,12 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                 if (isSearching) {
                     LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         groupedItemsToDisplay.forEach { (section, items) ->
                             item(key = "header_${section.name}") {
                                 ExpressiveListSectionHeader(section.title)
-                            }
-                            item(key = "card_${section.name}") {
                                 ExpressiveListCard {
                                     items.forEachIndexed { index, item ->
                                         item.Item()
@@ -2338,72 +2347,259 @@ fun WatchSettingsScreen(navBarNav: NavBarNav, topBarParams: TopBarParams) {
                     val healthDisplaced = state.coreConfig.enableIndex &&
                         state.healthTrackingEnabled && !state.coreConfig.preferHealthTab
 
-                    // When not searching, show category list in unified card
+                    val personalizationSections = setOf(
+                        Section.General,
+                        Section.Apps,
+                        Section.Notifications,
+                    )
+                    val watchFeatureSections = setOf(
+                        Section.Battery,
+                        Section.Health,
+                        Section.Calendar,
+                        Section.Weather,
+                        Section.Speech,
+                        Section.Music,
+                        Section.Display,
+                        Section.QuickLaunch,
+                        Section.NotificationsWatch,
+                        Section.Time,
+                        Section.Timeline,
+                        Section.QuietTime,
+                        Section.Defaults,
+                        Section.Other,
+                    )
+                    val systemSections = setOf(
+                        Section.Connectivity,
+                        Section.Diagnostics,
+                        Section.Debug,
+                    )
+                    val aboutSupportSections = setOf(
+                        Section.About,
+                        Section.Support,
+                    )
+
+                    val badgeCountsBySection = remember(filteredItems, sectionsToShowInList) {
+                        sectionsToShowInList.associateWith { section ->
+                            filteredItems
+                                .filter { it.section == section && it.badge != null && it.show() }
+                                .sumOf { it.badge?.toIntOrNull() ?: 0 }
+                        }
+                    }
+                    val aboutBadgeCount = badgeCountsBySection[Section.About] ?: 0
+
+                    @Composable
+                    fun renderSectionRow(
+                        section: Section,
+                        iconContainerColor: Color,
+                        iconTint: Color,
+                    ) {
+                        val sectionBadgeCount = badgeCountsBySection[section] ?: 0
+                        M3ESettingsCategoryItem(
+                            title = section.title,
+                            subtitle = section.subtitle,
+                            icon = section.icon,
+                            iconContainerColor = iconContainerColor,
+                            iconTint = iconTint,
+                            badgeCount = sectionBadgeCount,
+                            onClick = {
+                                val navigateDirectlyTo = section.navigatesDirectlyTo()
+                                if (navigateDirectlyTo != null) {
+                                    navBarNav.navigateTo(navigateDirectlyTo)
+                                } else {
+                                    navBarNav.navigateTo(
+                                        PebbleNavBarRoutes.WatchSettingsCategoryRoute(
+                                            section = section.name,
+                                            topLevelType = viewModel.selectedTopLevelType.name,
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
+
+                    val group1Sections = sectionsToShowInList.filter { it in personalizationSections }
+                    val group2Sections = sectionsToShowInList.filter { it in watchFeatureSections }
+                    val group3Sections = sectionsToShowInList.filter { it in systemSections }
+                    val group4Sections = sectionsToShowInList.filter { it in aboutSupportSections }
+
                     LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        item(key = "main_categories_card") {
-                            ExpressiveListSectionHeader("Settings")
-                            ExpressiveListCard {
-                                val allCategories = mutableListOf<@Composable () -> Unit>()
-                                if (notificationsDisplaced) {
-                                    allCategories.add {
-                                        M3ESettingsCategoryItem(
-                                            title = "Notifications",
-                                            icon = Icons.AutoMirrored.Default.ArrowForward,
-                                            onClick = {
-                                                navBarNav.navigateTo(PebbleNavBarRoutes.NotificationsRoute)
-                                            },
-                                        )
-                                    }
-                                }
-                                if (healthDisplaced) {
-                                    allCategories.add {
-                                        M3ESettingsCategoryItem(
-                                            title = "Health",
-                                            icon = Icons.AutoMirrored.Default.ArrowForward,
-                                            onClick = {
-                                                navBarNav.navigateTo(PebbleNavBarRoutes.HealthRoute)
-                                            },
-                                        )
-                                    }
-                                }
-                                sectionsToShowInList.forEach { section ->
-                                    val sectionBadgeCount = filteredItems
-                                        .filter { it.section == section && it.badge != null && it.show() }
-                                        .sumOf { it.badge?.toIntOrNull() ?: 0 }
-                                    allCategories.add {
-                                        M3ESettingsCategoryItem(
-                                            title = section.title,
-                                            icon = section.icon,
-                                            badgeCount = sectionBadgeCount,
-                                            onClick = {
-                                                val navigateDirectlyTo = section.navigatesDirectlyTo()
-                                                if (navigateDirectlyTo != null) {
-                                                    navBarNav.navigateTo(navigateDirectlyTo)
-                                                } else {
-                                                    navBarNav.navigateTo(
-                                                        PebbleNavBarRoutes.WatchSettingsCategoryRoute(
-                                                            section = section.name,
-                                                            topLevelType = viewModel.selectedTopLevelType.name,
-                                                        )
-                                                    )
-                                                }
+                        if (aboutBadgeCount > 0 && Section.About in sectionsToShowInList) {
+                            item(key = "attention_banner") {
+                                Surface(
+                                    shape = RoundedCornerShape(24.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                                        .clickable {
+                                            navBarNav.navigateTo(
+                                                PebbleNavBarRoutes.WatchSettingsCategoryRoute(
+                                                    section = Section.About.name,
+                                                    topLevelType = viewModel.selectedTopLevelType.name,
+                                                )
+                                            )
+                                        },
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(14.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(42.dp),
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Section.About.icon,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                                    modifier = Modifier.size(22.dp),
+                                                )
                                             }
-                                        )
-                                    }
-                                }
-
-                                allCategories.forEachIndexed { index, comp ->
-                                    comp()
-                                    if (index < allCategories.size - 1) {
-                                        ExpressiveListDivider()
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Action Recommended",
+                                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                            Text(
+                                                text = "Check permissions or app updates in About",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                                            )
+                                        }
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ) {
+                                            Text("$aboutBadgeCount")
+                                        }
                                     }
                                 }
                             }
                         }
+
+                        if (group1Sections.isNotEmpty() || notificationsDisplaced) {
+                            item(key = "group_personalization") {
+                                ExpressiveListSectionHeader("General & Personalization")
+                                ExpressiveListCard {
+                                    val rows = mutableListOf<@Composable () -> Unit>()
+                                    if (notificationsDisplaced) {
+                                        rows.add {
+                                            M3ESettingsCategoryItem(
+                                                title = "Notifications Hub",
+                                                subtitle = "Manage per-app notification rules & history",
+                                                icon = Icons.Default.Notifications,
+                                                iconContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                onClick = {
+                                                    navBarNav.navigateTo(PebbleNavBarRoutes.NotificationsRoute)
+                                                },
+                                            )
+                                        }
+                                    }
+                                    group1Sections.forEach { section ->
+                                        rows.add {
+                                            renderSectionRow(
+                                                section = section,
+                                                iconContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                                                iconTint = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                    }
+                                    rows.forEachIndexed { index, row ->
+                                        row()
+                                        if (index < rows.size - 1) {
+                                            ExpressiveListDivider()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (group2Sections.isNotEmpty() || healthDisplaced) {
+                            item(key = "group_watch_features") {
+                                ExpressiveListSectionHeader("Watch & Features")
+                                ExpressiveListCard {
+                                    val rows = mutableListOf<@Composable () -> Unit>()
+                                    if (healthDisplaced) {
+                                        rows.add {
+                                            M3ESettingsCategoryItem(
+                                                title = "Health Dashboard",
+                                                subtitle = "View activity, steps, sleep & heart rate charts",
+                                                icon = Icons.AutoMirrored.Filled.DirectionsRun,
+                                                iconContainerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f),
+                                                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                onClick = {
+                                                    navBarNav.navigateTo(PebbleNavBarRoutes.HealthRoute)
+                                                },
+                                            )
+                                        }
+                                    }
+                                    group2Sections.forEach { section ->
+                                        rows.add {
+                                            renderSectionRow(
+                                                section = section,
+                                                iconContainerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f),
+                                                iconTint = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                    }
+                                    rows.forEachIndexed { index, row ->
+                                        row()
+                                        if (index < rows.size - 1) {
+                                            ExpressiveListDivider()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (group3Sections.isNotEmpty()) {
+                            item(key = "group_system") {
+                                ExpressiveListSectionHeader("Connection & System")
+                                ExpressiveListCard {
+                                    group3Sections.forEachIndexed { index, section ->
+                                        renderSectionRow(
+                                            section = section,
+                                            iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.65f),
+                                            iconTint = MaterialTheme.colorScheme.tertiary,
+                                        )
+                                        if (index < group3Sections.size - 1) {
+                                            ExpressiveListDivider()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (group4Sections.isNotEmpty()) {
+                            item(key = "group_about_support") {
+                                ExpressiveListSectionHeader("About & Support")
+                                ExpressiveListCard {
+                                    group4Sections.forEachIndexed { index, section ->
+                                        renderSectionRow(
+                                            section = section,
+                                            iconContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                            iconTint = MaterialTheme.colorScheme.primary,
+                                        )
+                                        if (index < group4Sections.size - 1) {
+                                            ExpressiveListDivider()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         item(key = "main_footer") {
                             ExpressiveListFooter()
                         }
@@ -2420,6 +2616,9 @@ private fun M3ESettingsCategoryItem(
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String = "",
+    iconContainerColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f),
+    iconTint: Color = MaterialTheme.colorScheme.primary,
     badgeCount: Int = 0,
 ) {
     ListItem(
@@ -2431,15 +2630,15 @@ private fun M3ESettingsCategoryItem(
         ),
         leadingContent = {
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = iconContainerColor,
+                modifier = Modifier.size(44.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = iconTint,
                         modifier = Modifier.size(22.dp),
                     )
                 }
@@ -2452,6 +2651,17 @@ private fun M3ESettingsCategoryItem(
                 color = MaterialTheme.colorScheme.onSurface,
             )
         },
+        supportingContent = if (subtitle.isNotEmpty()) {
+            {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        } else null,
         trailingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -2465,15 +2675,73 @@ private fun M3ESettingsCategoryItem(
                         Text("$badgeCount")
                     }
                 }
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp),
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.size(28.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
             }
         },
     )
+}
+
+@Composable
+private fun M3ESettingsCategoryHeaderCard(
+    section: Section,
+    modifier: Modifier = Modifier,
+) {
+    if (section.subtitle.isEmpty()) return
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = section.icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = section.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = section.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -2512,121 +2780,171 @@ fun WatchSettingsCategoryScreen(
             }
         }
 
+        val groupedSubSections = remember(section, filteredItems) {
+            when (section) {
+                Section.Health -> {
+                    val trackingIds = setOf(
+                        EnableHealthTracking,
+                        SettingsIds.HrmEnabled,
+                        SettingsIds.HrmMeasurementInterval,
+                        SettingsIds.HrmActivityTracking,
+                    )
+                    val insightsIds = setOf(EnableActivityInsights, EnableSleepInsights)
+                    val profileIds = setOf(
+                        SettingsIds.HealthHeight,
+                        SettingsIds.HealthWeight,
+                        SettingsIds.HealthAge,
+                        SettingsIds.HealthGenderId,
+                    )
+                    val syncIds = setOf(EnableHealthPlatformSync)
+
+                    val trackingItems = filteredItems.filter { it.id in trackingIds }
+                    val insightsItems = filteredItems.filter { it.id in insightsIds }
+                    val profileItems = filteredItems.filter { it.id in profileIds }
+                    val syncItems = filteredItems.filter { it.id in syncIds || it.title == "Sync Now" || it.title == "Open Google Fit" }
+                    val otherItems = filteredItems.filter {
+                        it !in trackingItems && it !in insightsItems && it !in profileItems && it !in syncItems
+                    }
+                    listOf(
+                        "Health Tracking" to trackingItems,
+                        "Insights" to insightsItems,
+                        "Personal Profile" to profileItems,
+                        "Data Sync" to syncItems,
+                        "Preferences" to otherItems,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                Section.General -> {
+                    val displayTitles = setOf("Appearance", "Imperial Units")
+                    val accountTitles = setOf(
+                        "Sign In - Pebble Account",
+                        "Sign Out - Pebble Account",
+                        "Sign Out - Rebble",
+                        "Background Refresh Interval",
+                        "Enable Index Feed",
+                    )
+                    val g1 = filteredItems.filter { it.title in displayTitles }
+                    val g2 = filteredItems.filter { it.title in accountTitles }
+                    val g3 = filteredItems.filter { it !in g1 && it !in g2 }
+                    listOf(
+                        "Display & Units" to g1,
+                        "Account & Sync" to g2,
+                        "Device & Background" to g3,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                Section.Apps -> {
+                    val storeTitles = setOf(
+                        "Configure Appstore Sources",
+                        "Restore System app positions",
+                        "Download app updates in background",
+                        "Download app updates on Wi-Fi only",
+                    )
+                    val g1 = filteredItems.filter { it.title in storeTitles }
+                    val g2 = filteredItems.filter { it !in g1 }
+                    listOf(
+                        "Appstore & Updates" to g1,
+                        "Permissions & Compatibility" to g2,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                Section.Notifications -> {
+                    val soundVibeTitles = setOf(
+                        "Mute phone notification effects",
+                        "Mute phone call effects",
+                        "Vibration Pattern",
+                        "Use vibration patterns from OS",
+                    )
+                    val historyTitles = setOf(
+                        "Store notifications for",
+                        "Store disabled notifications",
+                    )
+                    val g2 = filteredItems.filter { it.title in soundVibeTitles }
+                    val g3 = filteredItems.filter { it.title in historyTitles }
+                    val g1 = filteredItems.filter { it !in g2 && it !in g3 }
+                    listOf(
+                        "Forwarding & Replies" to g1,
+                        "Sound & Vibration" to g2,
+                        "History & Storage" to g3,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                Section.About -> {
+                    val changelogTitles = setOf("What’s new in the app", "What’s new in PebbleOS")
+                    val g2 = filteredItems.filter { it.title in changelogTitles }
+                    val g1 = filteredItems.filter { it !in g2 }
+                    listOf(
+                        "App Status & Permissions" to g1,
+                        "Release Notes" to g2,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                Section.Support -> {
+                    val guideTitles = setOf("Getting Started & Troubleshooting")
+                    val g1 = filteredItems.filter { it.title in guideTitles }
+                    val g2 = filteredItems.filter { it !in g1 }
+                    listOf(
+                        "Guides & Troubleshooting" to g1,
+                        "Bug Reports" to g2,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                Section.Speech -> {
+                    val modelTitles = setOf("Manage Offline Models", "System Speech Model")
+                    val g2 = filteredItems.filter { it.title in modelTitles }
+                    val g1 = filteredItems.filter { it !in g2 }
+                    listOf(
+                        "Recognition & Language" to g1,
+                        "Speech Models" to g2,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                Section.Diagnostics -> {
+                    val telemetryTitles = setOf("Send app crashes", "Send watch analytics", "Send app analytics")
+                    val g1 = filteredItems.filter { it.title in telemetryTitles }
+                    val g2 = filteredItems.filter { it !in g1 }
+                    listOf(
+                        "Analytics & Crash Reports" to g1,
+                        "Diagnostic Logging" to g2,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                Section.Connectivity -> {
+                    val g1 = filteredItems.filter { !it.isDebugSetting && it.title != "Use LAN developer connection" }
+                    val g2 = filteredItems.filter { it !in g1 }
+                    listOf(
+                        "Bluetooth & Reconnection" to g1,
+                        "Developer & Advanced" to g2,
+                    ).filter { it.second.isNotEmpty() }
+                }
+                else -> {
+                    if (filteredItems.isNotEmpty()) {
+                        listOf(section.title to filteredItems)
+                    } else {
+                        emptyList()
+                    }
+                }
+            }
+        }
+
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (section == Section.Health) {
-                val trackingIds = setOf(
-                    EnableHealthTracking,
-                    SettingsIds.HrmEnabled,
-                    SettingsIds.HrmMeasurementInterval,
-                    SettingsIds.HrmActivityTracking
-                )
-                val insightsIds = setOf(
-                    EnableActivityInsights,
-                    EnableSleepInsights
-                )
-                val profileIds = setOf(
-                    SettingsIds.HealthHeight,
-                    SettingsIds.HealthWeight,
-                    SettingsIds.HealthAge,
-                    SettingsIds.HealthGenderId
-                )
-                val syncIds = setOf(
-                    EnableHealthPlatformSync
-                )
-
-                val trackingItems = filteredItems.filter { it.id in trackingIds }
-                val insightsItems = filteredItems.filter { it.id in insightsIds }
-                val profileItems = filteredItems.filter { it.id in profileIds }
-                val syncItems = filteredItems.filter { it.id in syncIds || it.title == "Sync Now" || it.title == "Open Google Fit" }
-                val otherItems = filteredItems.filter {
-                    it !in trackingItems && it !in insightsItems && it !in profileItems && it !in syncItems
-                }
-
-                if (trackingItems.isNotEmpty()) {
-                    item {
-                        ExpressiveListSectionHeader("Health Tracking")
-                        ExpressiveListCard {
-                            trackingItems.forEachIndexed { index, item ->
-                                item.Item()
-                                if (index < trackingItems.size - 1) {
-                                    ExpressiveListDivider()
-                                }
-                            }
-                        }
+            item(key = "category_header_banner") {
+                M3ESettingsCategoryHeaderCard(section = section)
+            }
+            groupedSubSections.forEachIndexed { groupIdx, (headerTitle, groupItems) ->
+                item(key = "group_${section.name}_$groupIdx") {
+                    if (groupedSubSections.size > 1) {
+                        ExpressiveListSectionHeader(headerTitle)
+                    } else {
+                        Spacer(modifier = Modifier.height(6.dp))
                     }
-                }
-                if (insightsItems.isNotEmpty()) {
-                    item {
-                        ExpressiveListSectionHeader("Insights")
-                        ExpressiveListCard {
-                            insightsItems.forEachIndexed { index, item ->
-                                item.Item()
-                                if (index < insightsItems.size - 1) {
-                                    ExpressiveListDivider()
-                                }
-                            }
-                        }
-                    }
-                }
-                if (profileItems.isNotEmpty()) {
-                    item {
-                        ExpressiveListSectionHeader("Personal Profile")
-                        ExpressiveListCard {
-                            profileItems.forEachIndexed { index, item ->
-                                item.Item()
-                                if (index < profileItems.size - 1) {
-                                    ExpressiveListDivider()
-                                }
-                            }
-                        }
-                    }
-                }
-                if (syncItems.isNotEmpty()) {
-                    item {
-                        ExpressiveListSectionHeader("Data Sync")
-                        ExpressiveListCard {
-                            syncItems.forEachIndexed { index, item ->
-                                item.Item()
-                                if (index < syncItems.size - 1) {
-                                    ExpressiveListDivider()
-                                }
-                            }
-                        }
-                    }
-                }
-                if (otherItems.isNotEmpty()) {
-                    item {
-                        ExpressiveListSectionHeader("Preferences")
-                        ExpressiveListCard {
-                            otherItems.forEachIndexed { index, item ->
-                                item.Item()
-                                if (index < otherItems.size - 1) {
-                                    ExpressiveListDivider()
-                                }
-                            }
-                        }
-                    }
-                }
-                item {
-                    ExpressiveListFooter()
-                }
-            } else {
-                item {
                     ExpressiveListCard {
-                        filteredItems.forEachIndexed { index, item ->
+                        groupItems.forEachIndexed { index, item ->
                             item.Item()
-                            if (index < filteredItems.size - 1) {
+                            if (index < groupItems.size - 1) {
                                 ExpressiveListDivider()
                             }
                         }
                     }
                 }
-                item {
-                    ExpressiveListFooter()
-                }
+            }
+            item(key = "category_footer") {
+                ExpressiveListFooter()
             }
         }
     }
@@ -2671,12 +2989,20 @@ fun basicSettingsActionItem(
                 if (button != null) {
                     button()
                 } else if (action != null) {
-                    Icon(
-                        imageVector = actionIcon ?: Icons.AutoMirrored.Default.ArrowForward,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp),
-                    )
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = actionIcon ?: Icons.AutoMirrored.Default.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
                 }
             },
             onClick = action,
@@ -2742,18 +3068,46 @@ fun basicSettingsNumberItem(
     show = show,
     isDebugSetting = isDebugSetting,
     item = {
+        var sliderPosition by remember(value) { mutableLongStateOf(value) }
+        val formattedValue = valueFormatter?.invoke(sliderPosition) ?: "$sliderPosition $unit".trim()
         ListItem(
             colors = ListItemDefaults.colors(
                 containerColor = Color.Transparent,
             ),
             headlineContent = {
-                Text(title)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+                    ) {
+                        Text(
+                            text = formattedValue,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        )
+                    }
+                }
             },
             supportingContent = {
-                var sliderPosition by remember(value) { mutableLongStateOf(value) }
-                Column {
+                Column(modifier = Modifier.padding(top = 4.dp)) {
                     if (description != null) {
-                        Text(description, fontSize = 11.sp)
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        )
                     }
                     val minF = remember(min) { min.toFloat() }
                     val maxF = remember(max) { max.toFloat() }
@@ -2770,14 +3124,12 @@ fun basicSettingsNumberItem(
                             onValueChange(sliderPosition)
                         },
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = valueFormatter?.invoke(sliderPosition) ?: "$sliderPosition $unit",
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(vertical = 6.dp),
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        if (defaultValue != null) {
+                    if (defaultValue != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             TextButton(
                                 onClick = {
                                     onValueChange(defaultValue)
@@ -2785,10 +3137,9 @@ fun basicSettingsNumberItem(
                                 enabled = value != defaultValue,
                             ) {
                                 Text(
-                                    text = "Default: ${valueFormatter?.invoke(defaultValue) ?: "$defaultValue $unit"}",
-                                    modifier = Modifier.widthIn(max = 150.dp),
+                                    text = "Default: ${valueFormatter?.invoke(defaultValue) ?: "$defaultValue $unit".trim()}",
+                                    style = MaterialTheme.typography.labelMedium,
                                     maxLines = 1,
-                                    lineHeight = 12.sp,
                                 )
                             }
                         }
@@ -3011,30 +3362,43 @@ fun <T> basicSettingsDropdownItem(
                 onDismissRequest = { showSheet = false },
             )
         }
-        ExpressiveListItem(
-            headlineText = title,
-            supportingText = description,
-            trailingContent = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = currentText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp),
-                    )
+        Column {
+            ExpressiveListItem(
+                headlineText = title,
+                supportingText = description,
+                trailingContent = {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+                        ) {
+                            Text(
+                                text = currentText,
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                maxLines = 1,
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+                },
+                onClick = { showSheet = true },
+            )
+            if (extraSupportingContent != null) {
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    extraSupportingContent()
                 }
-            },
-            onClick = { showSheet = true },
-        )
+            }
+        }
     },
 )
 

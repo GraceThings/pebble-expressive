@@ -45,6 +45,7 @@ fun PebbleElevatedButton(
     contentDescription: String? = null,
     primaryColor: Boolean,
     modifier: Modifier = Modifier,
+    leadingContent: (@Composable () -> Unit)? = null,
 ) {
     val colors = when {
         primaryColor -> AssistChipDefaults.elevatedAssistChipColors(
@@ -77,7 +78,9 @@ fun PebbleElevatedButton(
         onClick = onClick,
         enabled = enabled,
         leadingIcon = {
-            if (icon != null) {
+            if (leadingContent != null) {
+                leadingContent()
+            } else if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = contentDescription,

@@ -236,6 +236,7 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
         val urlLauncher = LocalUriHandler.current
         val nativeLockerAddUtil: NativeLockerAddUtil = koinInject()
         var adding by remember { mutableStateOf(false) }
+        var loadingSettings by remember { mutableStateOf(false) }
         var storeReview by remember { mutableStateOf<InstallReview?>(null) }
         var fabMenuExpanded by remember { mutableStateOf(false) }
 
@@ -354,6 +355,7 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
             adding,
             connected,
             loadingToWatch,
+            loadingSettings,
             settingsEnabled,
             entry,
             connectedIdentifier,
@@ -401,10 +403,18 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                         LockerAppAction(
                             label = "Settings",
                             icon = Icons.Default.Settings,
-                            enabled = settingsEnabled,
+                            enabled = settingsEnabled && !loadingSettings,
+                            isLoading = loadingSettings,
                             onClick = {
-                                scope.launch {
-                                    entry.showSettings(navBarNav, libPebble, topBarParams)
+                                if (!loadingSettings) {
+                                    loadingSettings = true
+                                    scope.launch {
+                                        try {
+                                            entry.showSettings(navBarNav, libPebble, topBarParams)
+                                        } finally {
+                                            loadingSettings = false
+                                        }
+                                    }
                                 }
                             }
                         )
@@ -434,15 +444,22 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                         onClick = {
                             if (action.enabled) {
                                 action.onClick()
-                            } else if (!connected && (action.label.contains("Start", ignoreCase = true) || action.label == "Settings")) {
+                            } else if (!connected && !action.isLoading && (action.label.contains("Start", ignoreCase = true) || action.label == "Settings")) {
                                 topBarParams.showSnackbar("No watch connected")
                             }
                         },
                         icon = {
-                            Icon(
-                                imageVector = action.icon,
-                                contentDescription = action.label,
-                            )
+                            if (action.isLoading || loadingSettings) {
+                                LoadingIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = LocalContentColor.current,
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = action.icon,
+                                    contentDescription = action.label,
+                                )
+                            }
                         },
                         text = {
                             Text(action.label)
@@ -454,12 +471,19 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                         button = {
                             ToggleFloatingActionButton(
                                 checked = fabMenuExpanded,
-                                onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
+                                onCheckedChange = { if (!loadingSettings) fabMenuExpanded = !fabMenuExpanded },
                             ) {
-                                Icon(
-                                    imageVector = if (fabMenuExpanded) Icons.Filled.Close else Icons.Filled.MoreVert,
-                                    contentDescription = if (fabMenuExpanded) "Close actions menu" else "App actions menu",
-                                )
+                                if (loadingSettings) {
+                                    LoadingIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = LocalContentColor.current,
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = if (fabMenuExpanded) Icons.Filled.Close else Icons.Filled.MoreVert,
+                                        contentDescription = if (fabMenuExpanded) "Close actions menu" else "App actions menu",
+                                    )
+                                }
                             }
                         },
                     ) {
@@ -467,7 +491,7 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                             FloatingActionButtonMenuItem(
                                 onClick = {
                                     if (!action.enabled) {
-                                        if (!connected) {
+                                        if (!connected && !action.isLoading) {
                                             topBarParams.showSnackbar("No watch connected")
                                         }
                                         return@FloatingActionButtonMenuItem
@@ -476,15 +500,22 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                                     action.onClick()
                                 },
                                 icon = {
-                                    Icon(
-                                        imageVector = action.icon,
-                                        contentDescription = action.label,
-                                        tint = if (action.enabled) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                        },
-                                    )
+                                    if (action.isLoading) {
+                                        LoadingIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = action.icon,
+                                            contentDescription = action.label,
+                                            tint = if (action.enabled) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                            },
+                                        )
+                                    }
                                 },
                                 text = {
                                     Text(
@@ -975,6 +1006,31 @@ fun LockerAppScreen(topBarParams: TopBarParams, uuid: Uuid?, navBarNav: NavBarNa
                     }
                 }
             }
+            if (loadingSettings) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.25f))
+                        .clickable(enabled = false) {},
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        tonalElevation = 6.dp,
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            LoadingIndicator(
+                                modifier = Modifier.size(48.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -1195,8 +1251,13 @@ suspend fun CommonApp.showSettings(
                 watch.currentPKJSSession.value
             } else {
                 logger.d("Launching app $uuid for pkjs settings...")
-                libPebble.launchApp(this, topBarParams, watch.identifier)
-                watch.currentPKJSSession.first { it?.uuid == uuid }
+                val launched = libPebble.launchApp(this, topBarParams, watch.identifier)
+                if (!launched) {
+                    return
+                }
+                withTimeoutOrNull(15.seconds) {
+                    watch.currentPKJSSession.first { it?.uuid == uuid }
+                }
             }
             if (session?.uuid != uuid) {
                 logger.e("PKJS session UUID mismatch: expected $uuid, got ${session?.uuid}")
@@ -1239,5 +1300,6 @@ private data class LockerAppAction(
     val label: String,
     val icon: ImageVector,
     val enabled: Boolean,
+    val isLoading: Boolean = false,
     val onClick: () -> Unit,
 )
