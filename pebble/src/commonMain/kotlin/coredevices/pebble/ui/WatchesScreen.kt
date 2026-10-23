@@ -79,6 +79,7 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
@@ -87,11 +88,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.rememberModalBottomSheetState
 import coredevices.pebble.custom.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -1994,6 +1999,7 @@ private fun NotificationDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageDialog(watch: ConnectedPebbleDevice, onDismissRequest: () -> Unit) {
     val languagePackRepository: LanguagePackRepository = koinInject()
@@ -2009,32 +2015,38 @@ fun LanguageDialog(watch: ConnectedPebbleDevice, onDismissRequest: () -> Unit) {
     var preparing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val dismiss = { if (!preparing) onDismissRequest() }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = dismiss,
-        title = { Text("Language Packs") },
-        text = {
-            Column {
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-                    items(languagePacks, key = { it.id }) { lp ->
-                        val isSelected = selectedLanguagePack == lp
-                        Column(
-                            modifier = Modifier.clickable(enabled = !preparing) {
-                                selectedLanguagePack = lp
-                                error = null
-                            }.border(
-                                width = 2.dp,
-                                color = if (isSelected) coreOrange else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp)
-                            ).padding(9.dp),
-                        ) {
-                            Text(lp.displayName())
-                            Text(
-                                lp.description(),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Language,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 12.dp).size(26.dp),
+                    )
+                    Text(
+                        text = "Language Packs",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
                 selectedLanguagePack?.takeIf { it.canContribute() }?.published?.let { published ->
                     TextButton(onClick = { uriHandler.openUri(published.translationUrl) }) {
@@ -2042,41 +2054,119 @@ fun LanguageDialog(watch: ConnectedPebbleDevice, onDismissRequest: () -> Unit) {
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val lp = selectedLanguagePack ?: return@TextButton
-                    preparing = true
-                    scope.launch {
-                        try {
-                            if (lp.published != null) {
-                                val path = languagePackRepository.prepareDownload(lp)
-                                watch.installLanguagePack(path, lp.displayName())
-                            } else {
-                                watch.installLanguagePack(lp.file, lp.displayName())
+
+            if (error != null) {
+                Text(
+                    text = error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                )
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
+            ) {
+                items(languagePacks, key = { it.id }) { lp ->
+                    val isSelected = selectedLanguagePack == lp
+                    ListItem(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !preparing) {
+                                selectedLanguagePack = lp
+                                error = null
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = {
+                            Text(
+                                text = lp.displayName(),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                ),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = lp.description(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingContent = {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    if (!preparing) {
+                                        selectedLanguagePack = lp
+                                        error = null
+                                    }
+                                },
+                                enabled = !preparing,
+                            )
+                        },
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedButton(
+                    onClick = dismiss,
+                    enabled = !preparing,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = {
+                        val lp = selectedLanguagePack ?: return@Button
+                        preparing = true
+                        scope.launch {
+                            try {
+                                if (lp.published != null) {
+                                    val path = languagePackRepository.prepareDownload(lp)
+                                    watch.installLanguagePack(path, lp.displayName())
+                                } else {
+                                    watch.installLanguagePack(lp.file, lp.displayName())
+                                }
+                                onDismissRequest()
+                            } catch (e: TimeoutCancellationException) {
+                                error = "Download timed out. Please try again."
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                logger.w(e) { "Language pack download failed" }
+                                error = "Could not download or verify the language pack. Please try again."
+                            } finally {
+                                preparing = false
                             }
-                            onDismissRequest()
-                        } catch (e: TimeoutCancellationException) {
-                            error = "Download timed out. Please try again."
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            logger.w(e) { "Language pack download failed" }
-                            error = "Could not download or verify the language pack. Please try again."
-                        } finally {
-                            preparing = false
                         }
+                    },
+                    enabled = selectedLanguagePack != null && !preparing &&
+                        watch.languagePackInstallState.installing() == null,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    if (preparing) {
+                        CircularWavyProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                        Spacer(Modifier.width(8.dp))
                     }
-                },
-                enabled = selectedLanguagePack != null && !preparing &&
-                    watch.languagePackInstallState.installing() == null,
-            ) { Text(if (preparing) "Downloading…" else "Install") }
-        },
-        dismissButton = {
-            TextButton(onClick = dismiss, enabled = !preparing) { Text("Cancel") }
+                    Text(if (preparing) "Downloading…" else "Install")
+                }
+            }
         }
-    )
+    }
 }
 
 @Composable
