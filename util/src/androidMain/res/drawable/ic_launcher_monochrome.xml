@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:scaleX="2.5"
+        android:scaleY="2.5"
+        android:translateX="24"
+        android:translateY="24">
+
+        <!-- 表带 -->
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M9,1.5h6c0.55,0 1,0.45 1,1v2.5H8V2.5c0,-0.55 0.45,-1 1,-1zM8,19h8v2.5c0,0.55 -0.45,1 -1,1H9c-0.55,0 -1,-0.45 -1,-1z" />
+
+        <!-- 圆形表盘 -->
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M12,4C7.58,4 4,7.58 4,12s3.58,8 8,8 8,-3.58 8,-8 -3.58,-8 -8,-8zM12,18c-3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6 6,2.69 6,6 -2.69,6 -6,6z" />
+
+        <!-- 右侧上方按钮 -->
+        <group
+            android:rotation="45"
+            android:pivotX="20.3"
+            android:pivotY="7.5">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M19.5,6.9h1.6a0.4,0.4 0,0 1,0.4 0.4v0.4a0.4,0.4 0,0 1,-0.4 0.4h-1.6a0.4,0.4 0,0 1,-0.4 -0.4v-0.4a0.4,0.4 0,0 1,0.4 -0.4z" />
+        </group>
+
+        <!-- 右侧中间按钮 -->
+        <group
+            android:rotation="90"
+            android:pivotX="21.5"
+            android:pivotY="12">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M20.7,11.4h1.6a0.4,0.4 0,0 1,0.4 0.4v0.4a0.4,0.4 0,0 1,-0.4 0.4h-1.6a0.4,0.4 0,0 1,-0.4 -0.4v-0.4a0.4,0.4 0,0 1,0.4 -0.4z" />
+        </group>
+
+        <!-- 右侧下方按钮 -->
+        <group
+            android:rotation="135"
+            android:pivotX="20.3"
+            android:pivotY="16.5">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M19.5,15.9h1.6a0.4,0.4 0,0 1,0.4 0.4v0.4a0.4,0.4 0,0 1,-0.4 0.4h-1.6a0.4,0.4 0,0 1,-0.4 -0.4v-0.4a0.4,0.4 0,0 1,0.4 -0.4z" />
+        </group>
+
+        <!-- 左侧中间按钮 -->
+        <group
+            android:rotation="90"
+            android:pivotX="2.5"
+            android:pivotY="12">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M1.7,11.4h1.6a0.4,0.4 0,0 1,0.4 0.4v0.4a0.4,0.4 0,0 1,-0.4 0.4h-1.6a0.4,0.4 0,0 1,-0.4 -0.4v-0.4a0.4,0.4 0,0 1,0.4 -0.4z" />
+        </group>
+    </group>
+
+</vector>
